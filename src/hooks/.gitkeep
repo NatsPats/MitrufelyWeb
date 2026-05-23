@@ -1,0 +1,2 @@
+# hooks — Custom hooks globales reutilizables
+# Ejemplos: useDebounce, useLocalStorage, useWindowSize, usePermission

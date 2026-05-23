@@ -1,0 +1,114 @@
+import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router'
+import { Suspense, lazy } from 'react'
+import { useAuthStore } from '@/app/store'
+import type { Permission } from '@/types/roles'
+import { PERMISSIONS } from '@/types/roles'
+
+// ─── Lazy imports ────────────────────────────────────────────────────────────
+const LoginPage = lazy(() => import('@/features/auth/pages/LoginPage'))
+const DashboardPage = lazy(() => import('@/features/dashboard/pages/DashboardPage'))
+const InventoryPage = lazy(() => import('@/features/inventory/pages/InventoryPage'))
+const OrdersPage = lazy(() => import('@/features/orders/pages/OrdersPage'))
+const ReportsPage = lazy(() => import('@/features/reports/pages/ReportsPage'))
+const SweetCoinsPage = lazy(() => import('@/features/sweetcoins/pages/SweetCoinsPage'))
+const NotFoundPage = lazy(() => import('@/features/auth/pages/NotFoundPage'))
+
+// ─── Loading fallback ─────────────────────────────────────────────────────────
+function PageLoader() {
+  return (
+    <div className="flex h-screen w-full items-center justify-center bg-background">
+      <div className="flex flex-col items-center gap-4">
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        <p className="text-sm text-muted-foreground">Cargando…</p>
+      </div>
+    </div>
+  )
+}
+
+// ─── Guard: usuario autenticado ───────────────────────────────────────────────
+function RequireAuth() {
+  const isAuthenticated = useAuthStore((s: { isAuthenticated: boolean }) => s.isAuthenticated)
+  const location = useLocation()
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" state={{ from: location }} replace />
+  }
+
+  return <Outlet />
+}
+
+// ─── Guard: RBAC por permiso ──────────────────────────────────────────────────
+interface RequirePermissionProps {
+  permission: Permission
+}
+
+function RequirePermission({ permission }: RequirePermissionProps) {
+  const user = useAuthStore(
+    (s: { user: ReturnType<typeof useAuthStore.getState>['user'] }) => s.user,
+  )
+
+  if (!user) {
+    return <Navigate to="/login" replace />
+  }
+
+  const allowedRoles = PERMISSIONS[permission]
+  if (!allowedRoles.includes(user.role)) {
+    return <Navigate to="/dashboard" replace />
+  }
+
+  return <Outlet />
+}
+
+// ─── Guard: redirige si ya está autenticado ───────────────────────────────────
+function GuestOnly() {
+  const isAuthenticated = useAuthStore((s: { isAuthenticated: boolean }) => s.isAuthenticated)
+  if (isAuthenticated) {
+    return <Navigate to="/dashboard" replace />
+  }
+  return <Outlet />
+}
+
+// ─── Router principal ─────────────────────────────────────────────────────────
+export function AppRouter() {
+  return (
+    <Suspense fallback={<PageLoader />}>
+      <Routes>
+        {/* Rutas públicas */}
+        <Route element={<GuestOnly />}>
+          <Route path="/login" element={<LoginPage />} />
+        </Route>
+
+        {/* Rutas protegidas — requieren autenticación */}
+        <Route element={<RequireAuth />}>
+          <Route path="/dashboard" element={<DashboardPage />} />
+
+          {/* Solo ADMIN y MANAGER */}
+          <Route element={<RequirePermission permission="VIEW_INVENTORY" />}>
+            <Route path="/inventory" element={<InventoryPage />} />
+          </Route>
+
+          {/* ADMIN, MANAGER y CASHIER */}
+          <Route element={<RequirePermission permission="VIEW_ORDERS" />}>
+            <Route path="/orders" element={<OrdersPage />} />
+          </Route>
+
+          {/* Solo ADMIN y MANAGER */}
+          <Route element={<RequirePermission permission="VIEW_REPORTS" />}>
+            <Route path="/reports" element={<ReportsPage />} />
+          </Route>
+
+          {/* ADMIN, MANAGER y CUSTOMER */}
+          <Route element={<RequirePermission permission="VIEW_SWEETCOINS" />}>
+            <Route path="/sweetcoins" element={<SweetCoinsPage />} />
+          </Route>
+        </Route>
+
+        {/* Redirección raíz */}
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+
+        {/* 404 */}
+        <Route path="*" element={<NotFoundPage />} />
+      </Routes>
+    </Suspense>
+  )
+}

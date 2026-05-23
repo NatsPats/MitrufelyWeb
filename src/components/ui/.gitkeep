@@ -1,0 +1,3 @@
+# components/ui — Primitivos UI reutilizables
+# Ejemplos: Button, Input, Badge, Card, Dialog, Dropdown…
+# Usar class-variance-authority (CVA) + cn() para variantes
