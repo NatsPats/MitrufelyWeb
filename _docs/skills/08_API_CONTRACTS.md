@@ -1,0 +1,209 @@
+# SKILL 08 — Contratos de API (Response Envelopes y Endpoints)
+
+> **CUÁNDO USAR:** Antes de definir respuestas de endpoints, manejar errores en el frontend, o escribir schemas Pydantic de salida.
+
+---
+
+## 1. Envelope de Respuesta Estándar
+
+### Success (2xx)
+```json
+{
+  "success": true,
+  "data": { ... },
+  "message": null
+}
+```
+
+### Error (4xx / 5xx)
+```json
+{
+  "success": false,
+  "error": {
+    "code": "NOT_FOUND",
+    "message": "Producto 42 no encontrado"
+  },
+  "request_id": "550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+### Paginado
+```json
+{
+  "items": [...],
+  "total": 150,
+  "page": 2,
+  "page_size": 20,
+  "total_pages": 8
+}
+```
+
+---
+
+## 2. Schemas Pydantic Base (`app/shared/schemas/`)
+
+```python
+# response.py
+from typing import Generic, TypeVar
+T = TypeVar("T")
+
+class APIResponse(BaseModel, Generic[T]):
+    success: bool = True
+    data: T
+    message: str | None = None
+
+class MessageResponse(BaseModel):
+    success: bool = True
+    message: str
+
+class ErrorDetail(BaseModel):
+    code: str
+    message: str
+
+class ErrorResponse(BaseModel):
+    success: bool = False
+    error: ErrorDetail
+    request_id: str
+
+# pagination.py
+class PaginationParams(BaseModel):
+    page: int = Field(1, ge=1)
+    page_size: int = Field(20, ge=1, le=100)
+
+    @property
+    def offset(self) -> int:
+        return (self.page - 1) * self.page_size
+
+class PaginatedResponse(BaseModel, Generic[T]):
+    items: list[T]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
+
+    @classmethod
+    def from_list(cls, items: list[T], total: int, params: PaginationParams):
+        return cls(
+            items=items,
+            total=total,
+            page=params.page,
+            page_size=params.page_size,
+            total_pages=ceil(total / params.page_size),
+        )
+```
+
+---
+
+## 3. Mapa de Endpoints por Módulo
+
+### Auth (`/api/v1/auth`)
+| Método | Ruta | Roles | Body / Query |
+|---|---|---|---|
+| `POST` | `/login` | Público | `{ email, password }` |
+| `POST` | `/register` | Público | `{ nombres, apellidos, email, password }` |
+| `POST` | `/refresh` | Público | `{ refresh_token }` |
+| `POST` | `/logout` | Autenticado | — |
+| `GET` | `/me` | Autenticado | — |
+
+### Users (`/api/v1/users`)
+| Método | Ruta | Roles | Descripción |
+|---|---|---|---|
+| `GET` | `/me/profile` | CLIENTE | Perfil completo |
+| `PUT` | `/me/profile` | CLIENTE | Actualizar perfil |
+| `GET` | `/me/fiscal-data` | CLIENTE | Datos fiscales |
+| `POST` | `/me/fiscal-data` | CLIENTE | Agregar dato fiscal |
+| `PUT` | `/me/fiscal-data/{id}` | CLIENTE | Actualizar |
+| `DELETE` | `/me/fiscal-data/{id}` | CLIENTE | Eliminar |
+| `GET` | `/` | ADMIN | Listar usuarios |
+| `PUT` | `/{id}/status` | ADMIN | Activar/desactivar |
+
+### Products (`/api/v1/products`)
+| Método | Ruta | Roles | Descripción |
+|---|---|---|---|
+| `GET` | `/` | Público | Catálogo paginado con filtros |
+| `GET` | `/{id}` | Público | Detalle de producto |
+| `GET` | `/categories` | Público | Categorías activas |
+| `POST` | `/` | ADMIN | Crear producto |
+| `PUT` | `/{id}` | ADMIN | Actualizar producto |
+| `DELETE` | `/{id}` | ADMIN | Desactivar producto |
+
+### Inventory (`/api/v1/inventory`)
+| Método | Ruta | Roles | Descripción |
+|---|---|---|---|
+| `GET` | `/lots` | ADMIN/ALMACEN | Listar lotes con filtros |
+| `POST` | `/lots` | ADMIN/ALMACEN | Ingresar lote |
+| `GET` | `/kardex/{producto_id}` | ADMIN/ALMACEN | Kardex paginado |
+| `POST` | `/adjustments` | ADMIN/ALMACEN | Ajuste manual de stock |
+| `GET` | `/stock-reconciliation` | ADMIN | Conciliación cache vs Kardex |
+
+### Orders (`/api/v1/orders`)
+| Método | Ruta | Roles | Descripción |
+|---|---|---|---|
+| `GET` | `/` | ADMIN/CAJERO | Todas las ventas |
+| `GET` | `/mine` | CLIENTE | Mis ventas |
+| `GET` | `/{id}` | Autenticado* | Detalle de venta |
+| `POST` | `/checkout` | CLIENTE | Crear venta + pago |
+| `PUT` | `/{id}/status` | ADMIN/CAJERO | Cambiar estado |
+| `POST` | `/{id}/cancel` | ADMIN/CAJERO | Anular venta |
+| `GET` | `/{id}/document` | Autenticado | Descargar PDF |
+
+### SweetCoins (`/api/v1/sweet-coins`)
+| Método | Ruta | Roles | Descripción |
+|---|---|---|---|
+| `GET` | `/balance` | CLIENTE | Saldo actual |
+| `GET` | `/history` | CLIENTE | Historial de movimientos |
+| `GET` | `/coupons/catalog` | CLIENTE | Catálogo de cupones canjeables |
+| `POST` | `/coupons/redeem` | CLIENTE | Canjear cupón |
+| `GET` | `/coupons/mine` | CLIENTE | Mis cupones |
+| `POST` | `/adjust` | ADMIN | Ajuste manual de puntos |
+| `GET` | `/config` | ADMIN | Configuración activa |
+| `PUT` | `/config` | ADMIN | Actualizar configuración |
+
+### Dashboard (`/api/v1/dashboard`)
+| Método | Ruta | Roles | Descripción |
+|---|---|---|---|
+| `GET` | `/kpis` | ADMIN | KPIs generales |
+| `GET` | `/sales-chart` | ADMIN | Datos para gráfico de ventas |
+| `GET` | `/top-products` | ADMIN | Productos más vendidos |
+| `GET` | `/low-stock` | ADMIN/ALMACEN | Productos bajo stock mínimo |
+
+---
+
+## 4. Códigos de Error Estándar
+
+| HTTP | error_code | Cuándo |
+|---|---|---|
+| 400 | `VALIDATION_ERROR` | Input inválido |
+| 401 | `UNAUTHORIZED` | Sin token |
+| 401 | `INVALID_TOKEN` | Token expirado/inválido |
+| 401 | `INVALID_CREDENTIALS` | Email/password incorrectos |
+| 403 | `FORBIDDEN` | Sin permisos |
+| 403 | `INSUFFICIENT_ROLE` | Rol insuficiente |
+| 404 | `NOT_FOUND` | Recurso no existe |
+| 409 | `CONFLICT` | Estado incompatible |
+| 409 | `DUPLICATE_RESOURCE` | Ya existe (email, documento) |
+| 422 | `BUSINESS_RULE_ERROR` | Regla de negocio violada |
+| 422 | `INSUFFICIENT_STOCK` | Stock insuficiente |
+| 422 | `INSUFFICIENT_SWEETCOINS` | SweetCoins insuficientes |
+| 500 | `INTERNAL_ERROR` | Error no esperado |
+| 503 | `EXTERNAL_SERVICE_ERROR` | Pasarela de pago caída |
+
+---
+
+## 5. Query Params Estándar (Paginación y Filtros)
+
+```
+GET /api/v1/products?page=1&page_size=20&categoria=3&estado=true&q=torta
+GET /api/v1/orders?page=1&page_size=20&estado=PENDIENTE&from=2025-01-01&to=2025-12-31
+GET /api/v1/inventory/lots?page=1&page_size=20&estado_lote=VIGENTE&id_producto=5
+```
+
+---
+
+## 6. Headers Requeridos
+
+```
+Authorization: Bearer <access_token>    # En todos los endpoints protegidos
+Content-Type: application/json          # En todos los POST/PUT/PATCH
+X-Request-ID: <uuid>                    # Opcional, se genera automáticamente
+```

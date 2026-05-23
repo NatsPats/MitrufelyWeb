@@ -1,0 +1,42 @@
+# ==============================================================================
+# Mifrufely Web — Render.com Deployment Configuration
+# https://render.com/docs/yaml-spec
+# ==============================================================================
+
+services:
+
+  # ── Web Service (FastAPI) ──────────────────────────────────────────────────
+  - type: web
+    name: mifrufely-backend
+    runtime: python
+    region: oregon
+    plan: starter
+    rootDir: _backEnd
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 2
+    healthCheckPath: /api/v1/health
+    autoDeploy: true
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: DEBUG
+        value: "false"
+      - key: LOG_FORMAT
+        value: json
+      - key: DATABASE_URL
+        sync: false  # Set via Render dashboard (secret)
+      - key: SECRET_KEY
+        generateValue: true
+      - key: REDIS_URL
+        fromService:
+          name: mifrufely-redis
+          type: redis
+          property: connectionString
+
+  # ── Redis ──────────────────────────────────────────────────────────────────
+  - type: redis
+    name: mifrufely-redis
+    region: oregon
+    plan: starter
+    maxmemoryPolicy: allkeys-lru
+    ipAllowList: []  # Internal only

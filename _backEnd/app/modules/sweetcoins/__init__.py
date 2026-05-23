@@ -1,0 +1,1 @@
+"""SweetCoins module package."""

@@ -1,0 +1,128 @@
+# ==============================================================================
+# Mifrufely Web — Docker Compose (Development)
+# Services: API + Redis + Celery Worker + Celery Beat
+# ==============================================================================
+# NOTA: 'version' eliminado — obsoleto en Docker Compose v2+
+
+services:
+
+  # ── FastAPI Application ────────────────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development          # Stage dedicado a desarrollo (ver Dockerfile)
+    command:
+      - uvicorn
+      - app.main:app
+      - --host
+      - "0.0.0.0"
+      - --port
+      - "8000"
+      - --reload
+      - --reload-dir
+      - /app
+      - --log-level
+      - info
+    volumes:
+      - .:/app                     # Bind mount: código local → contenedor
+    ports:
+      - "127.0.0.1:8000:8000"     # Solo accesible desde localhost
+    environment:
+      - APP_ENV=development
+      - DEBUG=true
+      - PYTHONPATH=/app            # Necesario para imports desde bind mount
+      - WATCHFILES_FORCE_POLLING=true   # REQUERIDO en Windows+WSL2 para hot reload
+      - WATCHFILES_POLL_DELAY_MS=1000   # Polling cada 1s (balance perf/latencia)
+    env_file:
+      - .env
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - mifrufely-net
+    restart: on-failure
+
+  # ── Redis ──────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7.2-alpine
+    ports:
+      - "127.0.0.1:6379:6379"     # Solo localhost — evita exposición en redes compartidas
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - mifrufely-net
+    restart: unless-stopped
+
+  # ── Celery Worker ──────────────────────────────────────────────────────────
+  celery_worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development          # Mismo stage que api para consistencia
+    command:
+      - celery
+      - -A
+      - app.infrastructure.workers.celery_app
+      - worker
+      - --loglevel=info
+      - --concurrency=2
+      - -Q
+      - celery
+    volumes:
+      - .:/app
+    environment:
+      - PYTHONPATH=/app
+    env_file:
+      - .env
+    depends_on:
+      redis:
+        condition: service_healthy  # FIX: esperar a que Redis esté listo
+    networks:
+      - mifrufely-net
+    restart: on-failure
+
+  # ── Celery Beat (Scheduler) ────────────────────────────────────────────────
+  celery_beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    command:
+      - celery
+      - -A
+      - app.infrastructure.workers.celery_app
+      - beat
+      - --loglevel=info
+      - --scheduler
+      - celery.beat:PersistentScheduler
+      - --schedule
+      - /var/celerybeat/celerybeat-schedule
+    volumes:
+      - .:/app
+      - beat_schedule:/var/celerybeat   # FIX: directorio dedicado, path explícito
+    environment:
+      - PYTHONPATH=/app
+    env_file:
+      - .env
+    depends_on:
+      redis:
+        condition: service_healthy   # FIX: esperar a que Redis esté listo
+    networks:
+      - mifrufely-net
+    restart: on-failure
+
+volumes:
+  redis_data:
+  beat_schedule:
+
+networks:
+  mifrufely-net:
+    driver: bridge
+

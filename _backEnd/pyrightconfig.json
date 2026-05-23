@@ -1,0 +1,12 @@
+{
+  "include": ["app", "tests"],
+  "exclude": [".venv", "**/__pycache__", ".ruff_cache", ".mypy_cache"],
+  "pythonVersion": "3.11",
+  "pythonPlatform": "Windows",
+  "venvPath": ".",
+  "venv": ".venv",
+  "typeCheckingMode": "basic",
+  "useLibraryCodeForTypes": true,
+  "reportMissingImports": true,
+  "reportMissingModuleSource": false
+}
