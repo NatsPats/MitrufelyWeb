@@ -1,35 +1,26 @@
 """
 Mifrufely Web — SQLAlchemy Declarative Base
 All ORM models must inherit from Base.
+
+NOTE: This base class is intentionally kept minimal — it does NOT define
+shared audit columns (created_at / updated_at) because the physical schema
+in NeonDB does not have those columns on any table. Each model declares
+only the columns that exist in the PostgreSQL database.
 """
 
-from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import DateTime, func
-from sqlalchemy.orm import DeclarativeBase, Mapped, MappedColumn, mapped_column
+from sqlalchemy.orm import DeclarativeBase
 
 
 class Base(DeclarativeBase):
     """
     Shared declarative base for all ORM models.
-    Provides automatic audit timestamps.
+    Pure declarative base — no shared columns.
+    Each model declares its own columns matching the physical NeonDB schema.
     """
 
     __abstract__ = True
-
-    # ── Audit Columns ─────────────────────────────────────────────────────────
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        server_default=func.now(),
-        nullable=False,
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        server_default=func.now(),
-        onupdate=func.now(),
-        nullable=False,
-    )
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize ORM model to a plain dict (excludes relationships)."""
@@ -39,5 +30,7 @@ class Base(DeclarativeBase):
         }
 
     def __repr__(self) -> str:
-        pk = getattr(self, "id", "?")
-        return f"<{self.__class__.__name__} id={pk}>"
+        # Try common PK column names used in this schema (id_<table>)
+        for col in self.__table__.primary_key:
+            return f"<{self.__class__.__name__} {col.name}={getattr(self, col.name, '?')}>"
+        return f"<{self.__class__.__name__}>"

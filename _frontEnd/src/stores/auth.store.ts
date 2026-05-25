@@ -8,10 +8,12 @@ interface AuthState {
   user: User | null
   isAuthenticated: boolean
   isLoading: boolean
+  refreshToken: string | null
 }
 
 interface AuthActions {
-  setUser: (user: User, accessToken: string) => void
+  setUser: (user: User, accessToken: string, refreshToken?: string) => void
+  setRefreshToken: (token: string | null) => void
   updateUser: (partial: Partial<User>) => void
   logout: () => void
   setLoading: (loading: boolean) => void
@@ -26,14 +28,24 @@ export const useAuthStore = create<AuthStore>()(
       user: null,
       isAuthenticated: false,
       isLoading: false,
+      refreshToken: null,
 
       // ─── Actions ───────────────────────────────────────────────────────────
-      setUser: (user, accessToken) => {
+      setUser: (user, accessToken, refreshToken) => {
         setAccessToken(accessToken)
         set((state) => {
           state.user = user
           state.isAuthenticated = true
           state.isLoading = false
+          if (refreshToken) {
+            state.refreshToken = refreshToken
+          }
+        })
+      },
+
+      setRefreshToken: (token) => {
+        set((state) => {
+          state.refreshToken = token
         })
       },
 
@@ -51,6 +63,7 @@ export const useAuthStore = create<AuthStore>()(
           state.user = null
           state.isAuthenticated = false
           state.isLoading = false
+          state.refreshToken = null
         })
       },
 
@@ -63,10 +76,11 @@ export const useAuthStore = create<AuthStore>()(
     {
       name: 'mitrufely-auth',
       storage: createJSONStorage(() => sessionStorage),
-      // Solo persiste datos no sensibles — el token va en memoria
+      // Persistimos datos de usuario e identidad y el refresh_token
       partialize: (state) => ({
         user: state.user,
         isAuthenticated: state.isAuthenticated,
+        refreshToken: state.refreshToken,
       }),
     },
   ),

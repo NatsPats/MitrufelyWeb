@@ -86,13 +86,19 @@ api.interceptors.response.use(
       isRefreshing = true
 
       try {
-        const { data } = await axios.post<{ accessToken: string }>(
+        const { useAuthStore } = await import('@/app/store')
+        const rToken = useAuthStore.getState().refreshToken
+        if (!rToken) throw new Error('No refresh token available')
+
+        const { data } = await axios.post<{ access_token: string; refresh_token?: string }>(
           `${BASE_URL}/auth/refresh`,
-          {},
-          { withCredentials: true },
+          { refresh_token: rToken },
         )
-        const newToken = data.accessToken
+        const newToken = data.access_token
         setAccessToken(newToken)
+        if (data.refresh_token) {
+          useAuthStore.getState().setRefreshToken(data.refresh_token)
+        }
         onRefreshSuccess(newToken)
         if (originalRequest.headers) {
           originalRequest.headers.Authorization = `Bearer ${newToken}`

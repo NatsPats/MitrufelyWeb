@@ -1,0 +1,57 @@
+import api from '@/lib/axios'
+import type { LoginCredentials } from '@/types/auth'
+
+export interface RegisterPayload {
+  first_name: string
+  last_name: string
+  email: string
+  password: string
+  phone?: string
+}
+
+export interface AuthTokenResponse {
+  access_token: string
+  refresh_token: string
+  token_type: string
+  expires_in: number
+}
+
+export interface RegisterResponse {
+  user_id: number
+  email: string
+  message: string
+}
+
+export interface UserMeResponse {
+  id_usuario: number
+  nombres: string
+  apellidos: string
+  email: string
+  telefono: string | null
+  estado: boolean
+  rol: {
+    id_rol: number
+    nombre: string
+  }
+}
+
+export const authApi = {
+  login: async (credentials: LoginCredentials): Promise<AuthTokenResponse> => {
+    const { data } = await api.post<AuthTokenResponse>('/auth/login', credentials)
+    return data
+  },
+
+  register: async (payload: RegisterPayload): Promise<RegisterResponse> => {
+    const { data } = await api.post<RegisterResponse>('/auth/register', payload)
+    return data
+  },
+
+  logout: async (): Promise<void> => {
+    await api.post('/auth/logout')
+  },
+
+  getMe: async (): Promise<UserMeResponse> => {
+    const { data } = await api.get<UserMeResponse>('/auth/me')
+    return data
+  }
+}

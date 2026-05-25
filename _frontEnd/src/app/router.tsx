@@ -6,6 +6,8 @@ import { PERMISSIONS } from '@/types/roles'
 
 // ─── Lazy imports ────────────────────────────────────────────────────────────
 const LoginPage = lazy(() => import('@/features/auth/pages/LoginPage'))
+const RegisterPage = lazy(() => import('@/features/auth/pages/RegisterPage'))
+const HomePage = lazy(() => import('@/features/dashboard/pages/HomePage'))
 const DashboardPage = lazy(() => import('@/features/dashboard/pages/DashboardPage'))
 const InventoryPage = lazy(() => import('@/features/inventory/pages/InventoryPage'))
 const OrdersPage = lazy(() => import('@/features/orders/pages/OrdersPage'))
@@ -53,6 +55,9 @@ function RequirePermission({ permission }: RequirePermissionProps) {
 
   const allowedRoles = PERMISSIONS[permission]
   if (!allowedRoles.includes(user.role)) {
+    if (user.role === 'customer') {
+      return <Navigate to="/" replace />
+    }
     return <Navigate to="/dashboard" replace />
   }
 
@@ -61,8 +66,11 @@ function RequirePermission({ permission }: RequirePermissionProps) {
 
 // ─── Guard: redirige si ya está autenticado ───────────────────────────────────
 function GuestOnly() {
-  const isAuthenticated = useAuthStore((s: { isAuthenticated: boolean }) => s.isAuthenticated)
+  const { isAuthenticated, user } = useAuthStore()
   if (isAuthenticated) {
+    if (user?.role === 'customer') {
+      return <Navigate to="/" replace />
+    }
     return <Navigate to="/dashboard" replace />
   }
   return <Outlet />
@@ -73,9 +81,10 @@ export function AppRouter() {
   return (
     <Suspense fallback={<PageLoader />}>
       <Routes>
-        {/* Rutas públicas */}
+        {/* Rutas públicas exclusivas para no autenticados */}
         <Route element={<GuestOnly />}>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
         </Route>
 
         {/* Rutas protegidas — requieren autenticación */}
@@ -103,8 +112,8 @@ export function AppRouter() {
           </Route>
         </Route>
 
-        {/* Redirección raíz */}
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        {/* Ruta principal pública: HomePage */}
+        <Route path="/" element={<HomePage />} />
 
         {/* 404 */}
         <Route path="*" element={<NotFoundPage />} />
