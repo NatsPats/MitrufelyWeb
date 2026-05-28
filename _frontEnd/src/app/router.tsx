@@ -5,15 +5,15 @@ import type { Permission } from '@/types/roles'
 import { PERMISSIONS } from '@/types/roles'
 
 // ─── Lazy imports ────────────────────────────────────────────────────────────
-const LoginPage = lazy(() => import('@/features/auth/pages/LoginPage'))
-const RegisterPage = lazy(() => import('@/features/auth/pages/RegisterPage'))
-const HomePage = lazy(() => import('@/features/dashboard/pages/HomePage'))
+const LoginPage    = lazy(() => import('@/pages/public/LoginPage'))
+const RegisterPage = lazy(() => import('@/pages/public/RegisterPage'))
+const HomePage     = lazy(() => import('@/pages/public/HomePage'))
 const DashboardPage = lazy(() => import('@/features/dashboard/pages/DashboardPage'))
 const InventoryPage = lazy(() => import('@/features/inventory/pages/InventoryPage'))
 const OrdersPage = lazy(() => import('@/features/orders/pages/OrdersPage'))
 const ReportsPage = lazy(() => import('@/features/reports/pages/ReportsPage'))
-const SweetCoinsPage = lazy(() => import('@/features/sweetcoins/pages/SweetCoinsPage'))
-const NotFoundPage = lazy(() => import('@/features/auth/pages/NotFoundPage'))
+const CriptoTrufasPage = lazy(() => import('@/features/sweetcoins/pages/SweetCoinsPage'))
+const NotFoundPage = lazy(() => import('@/pages/NotFoundPage'))
 
 // ─── Loading fallback ─────────────────────────────────────────────────────────
 function PageLoader() {
@@ -108,7 +108,7 @@ export function AppRouter() {
 
           {/* ADMIN, MANAGER y CUSTOMER */}
           <Route element={<RequirePermission permission="VIEW_SWEETCOINS" />}>
-            <Route path="/sweetcoins" element={<SweetCoinsPage />} />
+            <Route path="/sweetcoins" element={<CriptoTrufasPage />} />
           </Route>
         </Route>
 

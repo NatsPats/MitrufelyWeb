@@ -1,3 +1,3 @@
 /** Re-exporta todos los stores para importación centralizada */
-export { useAuthStore } from '../stores/auth.store'
-export { useUiStore } from '../stores/ui.store'
+export { useAuthStore } from '@/features/auth/store/auth.store'
+export { useUiStore }   from '@/shared/stores/ui.store'

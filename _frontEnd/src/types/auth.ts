@@ -1,35 +1,5 @@
-import type { Role } from './roles'
-
-export interface User {
-  id: string
-  email: string
-  name: string
-  role: Role
-  avatarUrl?: string
-  sweetCoinsBalance: number
-  createdAt: string
-  updatedAt: string
-}
-
-export interface AuthTokens {
-  accessToken: string
-  /** El refresh token llega en httpOnly cookie — no se expone en JS */
-  expiresIn: number
-}
-
-export interface LoginCredentials {
-  email: string
-  password: string
-}
-
-export interface RegisterPayload {
-  name: string
-  email: string
-  password: string
-  passwordConfirm: string
-}
-
-export interface AuthResponse {
-  user: User
-  tokens: AuthTokens
-}
+/**
+ * @deprecated Este barrel solo existe por retrocompatibilidad.
+ * Importa directamente desde '@/shared/types/auth.types'.
+ */
+export type { User, AuthTokens, LoginCredentials, RegisterPayload, AuthResponse } from '@/shared/types/auth.types'

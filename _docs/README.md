@@ -15,7 +15,7 @@ _docs/
 │   ├── 03_AUTH_SECURITY.md
 │   ├── 04_CHECKOUT_FLOW.md
 │   ├── 05_INVENTORY_STOCK.md
-│   ├── 06_SWEETCOINS.md
+│   ├── 06_CRIPTOTRUFA.md
 │   ├── 07_FRONTEND_ARCHITECTURE.md
 │   ├── 08_API_CONTRACTS.md
 │   ├── 09_BACKGROUND_TASKS.md
@@ -44,7 +44,7 @@ _docs/
 
 Para la sustentación y revisión con el docente, hemos preparado una guía arquitectónica detallada que explica cómo se aplican los principios modernos de ingeniería de software directamente sobre el código real de Mytrufely:
 
-👉 **[PRINCIPIOS_Y_PATRONES.md](./PRINCIPIOS_Y_PATRONES.md)** — *Explica SOLID (S-O-L-I-D), el patrón MVC desacoplado y patrones de diseño implementados (Repository, Singleton, Dependency Injection, Chain of Responsibility, Observer, etc.) con fragmentos de código del proyecto.*
+👉 **[PRINCIPIOS_Y_PATRONES.md](./PRINCIPIOS_Y_PATRONES.md)** — _Explica SOLID (S-O-L-I-D), el patrón MVC desacoplado y patrones de diseño implementados (Repository, Singleton, Dependency Injection, Chain of Responsibility, Observer, etc.) con fragmentos de código del proyecto._
 
 ---
 
@@ -57,4 +57,3 @@ Cuando le pidas a la IA que implemente algo, adjunta el skill relevante al conte
 ```
 
 La IA leerá el índice para entender el ecosistema y el skill específico para los detalles técnicos del dominio.
-
