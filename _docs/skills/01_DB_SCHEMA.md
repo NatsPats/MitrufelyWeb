@@ -19,7 +19,7 @@ Todos estos tipos deben mapearse en Python como `enum.StrEnum` o `enum.Enum` y d
 
 | Enum PostgreSQL | Valores |
 |---|---|
-| `tipo_rol_enum` | `ADMIN`, `CLIENTE`, `CAJERO`, `ALMACEN` |
+| `tipo_rol_enum` | `ADMIN`, `CLIENTE` |
 | `tipo_documento_fiscal_enum` | `DNI`, `RUC` |
 | `estado_lote_enum` | `VIGENTE`, `AGOTADO`, `VENCIDO` |
 | `tipo_movimiento_stock_enum` | `INGRESO_COMPRA`, `VENTA`, `AJUSTE_POSITIVO`, `AJUSTE_NEGATIVO`, `MERMA`, `VENCIMIENTO`, `DEVOLUCION` |

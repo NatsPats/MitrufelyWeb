@@ -22,7 +22,7 @@ Gestiona toda la **identidad y autenticación** de los actores del sistema: role
 | `id_rol`  | `serial`          | PK                   |
 | `nombre`  | `tipo_rol_enum`   | UNIQUE NOT NULL      |
 
-**Valores iniciales esperados**: `ADMIN`, `CLIENTE`, `CAJERO`, `ALMACEN`
+**Valores iniciales esperados**: `ADMIN`, `CLIENTE`
 
 ---
 

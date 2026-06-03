@@ -37,6 +37,27 @@ def mock_repo():
     repo.exists = AsyncMock(return_value=True)
     repo.delete = AsyncMock(return_value=None)
     
+    # Mock get_by_id
+    async def mock_get_by_id(pk):
+        return Producto(
+            id_producto=pk,
+            nombre="Torta de Chocolate",
+            slug="test-producto",
+            descripcion="Descripción test",
+            ingredientes="Ingredientes test",
+            alergenos="Ninguno",
+            peso_gramos=500.0,
+            precio=45.0,
+            stock_minimo=5,
+            stock_actual=10,
+            imagen_url="https://res.cloudinary.com/demo/image/upload/v1/test.jpg",
+            cloudinary_public_id="mitrufely/products/test-id",
+            estado=True,
+            fecha_creacion=datetime.now(),
+            fecha_actualizacion=datetime.now()
+        )
+    repo.get_by_id = AsyncMock(side_effect=mock_get_by_id)
+    
     # Mock get_paginated
     repo.get_paginated = AsyncMock(return_value=(1, []))
     

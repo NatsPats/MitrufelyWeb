@@ -1,7 +1,7 @@
 """
 Mifrufely Web — Database Seed Script
 Seeds the base data required for the application to function:
-  - roles (ADMIN, CLIENTE, CAJERO, ALMACEN)
+  - roles (ADMIN, CLIENTE)
   - configuracion_recompensas (default active config)
 
 Run from the _backEnd directory:
@@ -22,7 +22,7 @@ from app.infrastructure.database.session import database_engine
 
 
 async def seed_roles(session: AsyncSession) -> None:
-    """Insert the 4 base roles if they don't exist yet."""
+    """Insert the 2 base roles if they don't exist yet."""
     result = await session.execute(text("SELECT COUNT(*) FROM roles"))
     count = result.scalar()
 
@@ -33,13 +33,11 @@ async def seed_roles(session: AsyncSession) -> None:
     await session.execute(text("""
         INSERT INTO roles (nombre) VALUES
             ('ADMIN'),
-            ('CLIENTE'),
-            ('CAJERO'),
-            ('ALMACEN')
+            ('CLIENTE')
         ON CONFLICT (nombre) DO NOTHING
     """))
     await session.commit()
-    print("✓ roles: seeded 4 base roles (ADMIN, CLIENTE, CAJERO, ALMACEN).")
+    print("✓ roles: seeded 2 base roles (ADMIN, CLIENTE).")
 
 
 async def seed_categorias(session: AsyncSession) -> None:

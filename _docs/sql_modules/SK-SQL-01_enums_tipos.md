@@ -18,7 +18,7 @@ Define todos los **tipos enumerados (`ENUM`)** del sistema Mytrufely. Los ENUMs 
 
 | Nombre                         | Valores posibles                                                                  | Usado en tabla(s)                        |
 |--------------------------------|-----------------------------------------------------------------------------------|------------------------------------------|
-| `tipo_rol_enum`                | `ADMIN`, `CLIENTE`, `CAJERO`, `ALMACEN`                                           | `usuarios.nombre`                        |
+| `tipo_rol_enum`                | `ADMIN`, `CLIENTE`                                                                | `usuarios.nombre`                        |
 | `tipo_documento_fiscal_enum`   | `DNI`, `RUC`                                                                      | `datos_fiscales.tipo_documento`          |
 | `estado_lote_enum`             | `VIGENTE`, `AGOTADO`, `VENCIDO`                                                   | `lotes.estado_lote`                      |
 | `tipo_movimiento_stock_enum`   | `INGRESO_COMPRA`, `VENTA`, `AJUSTE_POSITIVO`, `AJUSTE_NEGATIVO`, `MERMA`, `VENCIMIENTO`, `DEVOLUCION` | `movimientos_stock.tipo_movimiento` |

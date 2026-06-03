@@ -140,21 +140,21 @@ class PaginatedResponse(BaseModel, Generic[T]):
 ### Inventory (`/api/v1/inventory`)
 | Método | Ruta | Roles | Descripción |
 |---|---|---|---|
-| `GET` | `/lots` | ADMIN/ALMACEN | Listar lotes con filtros |
-| `POST` | `/lots` | ADMIN/ALMACEN | Ingresar lote |
-| `GET` | `/kardex/{producto_id}` | ADMIN/ALMACEN | Kardex paginado |
-| `POST` | `/adjustments` | ADMIN/ALMACEN | Ajuste manual de stock |
+| `GET` | `/lots` | ADMIN | Listar lotes con filtros |
+| `POST` | `/lots` | ADMIN | Ingresar lote |
+| `GET` | `/kardex/{producto_id}` | ADMIN | Kardex paginado |
+| `POST` | `/adjustments` | ADMIN | Ajuste manual de stock |
 | `GET` | `/stock-reconciliation` | ADMIN | Conciliación cache vs Kardex |
 
 ### Ventas (`/api/v1/ventas`)
 | Método | Ruta | Roles | Descripción |
 |---|---|---|---|
-| `GET` | `/` | ADMIN/CAJERO | Todas las ventas |
+| `GET` | `/` | ADMIN | Todas las ventas |
 | `GET` | `/mine` | CLIENTE | Mis ventas |
 | `GET` | `/{id}` | Autenticado* | Detalle de venta |
 | `POST` | `/checkout` | CLIENTE | Crear venta + pago |
-| `PUT` | `/{id}/status` | ADMIN/CAJERO | Cambiar estado |
-| `POST` | `/{id}/cancel` | ADMIN/CAJERO | Anular venta |
+| `PUT` | `/{id}/status` | ADMIN | Cambiar estado |
+| `POST` | `/{id}/cancel` | ADMIN | Anular venta |
 | `GET` | `/{id}/document` | Autenticado | Descargar PDF |
 
 ### CriptoTrufas (`/api/v1/criptotrufas`)
@@ -175,7 +175,7 @@ class PaginatedResponse(BaseModel, Generic[T]):
 | `GET` | `/kpis` | ADMIN | KPIs generales |
 | `GET` | `/sales-chart` | ADMIN | Datos para gráfico de ventas |
 | `GET` | `/top-products` | ADMIN | Productos más vendidos |
-| `GET` | `/low-stock` | ADMIN/ALMACEN | Productos bajo stock mínimo |
+| `GET` | `/low-stock` | ADMIN | Productos bajo stock mínimo |
 
 ---
 

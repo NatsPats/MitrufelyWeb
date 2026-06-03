@@ -8,7 +8,7 @@
 
 ### En la Base de Datos
 ```sql
-CREATE TYPE tipo_rol_enum AS ENUM ('ADMIN', 'CLIENTE', 'CAJERO', 'ALMACEN');
+CREATE TYPE tipo_rol_enum AS ENUM ('ADMIN', 'CLIENTE');
 CREATE TABLE roles (id_rol serial PRIMARY KEY, nombre tipo_rol_enum UNIQUE NOT NULL);
 ```
 
@@ -17,8 +17,6 @@ CREATE TABLE roles (id_rol serial PRIMARY KEY, nombre tipo_rol_enum UNIQUE NOT N
 class TipoRolEnum(str, enum.Enum):
     ADMIN = "ADMIN"
     CLIENTE = "CLIENTE"
-    CAJERO = "CAJERO"
-    ALMACEN = "ALMACEN"
 
 class AuthProviderEnum(str, enum.Enum):
     LOCAL = "local"

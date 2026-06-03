@@ -13,8 +13,6 @@ class TipoRolEnum(str, enum.Enum):
     """Roles de usuario dentro del sistema. Tabla: roles."""
     ADMIN = "ADMIN"
     CLIENTE = "CLIENTE"
-    CAJERO = "CAJERO"
-    ALMACEN = "ALMACEN"
 
 
 class AuthProviderEnum(str, enum.Enum):

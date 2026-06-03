@@ -47,7 +47,7 @@ _frontEnd/src/
 │   │   ├── CheckoutPage.tsx
 │   │   ├── OrdersPage.tsx
 │   │   └── CriptoTrufasPage.tsx
-│   └── admin/                   # Rol: ADMIN / CAJERO / ALMACEN
+│   └── admin/                   # Rol: ADMIN
 │       ├── DashboardPage.tsx
 │       ├── InventoryPage.tsx
 │       ├── OrdersManagePage.tsx
@@ -246,7 +246,7 @@ export const router = createBrowserRouter([
   },
   {
     path: "/admin",
-    element: <RoleGuard roles={["ADMIN", "CAJERO", "ALMACEN"]}><AdminLayout /></RoleGuard>,
+    element: <RoleGuard roles={["ADMIN"]}><AdminLayout /></RoleGuard>,
     children: [
       { index: true, element: <DashboardPage /> },
       { path: "inventory", element: <InventoryPage /> },

@@ -10,9 +10,7 @@
 -- Roles de usuario dentro del sistema
 CREATE TYPE tipo_rol_enum AS ENUM (
   'ADMIN',
-  'CLIENTE',
-  'CAJERO',
-  'ALMACEN'
+  'CLIENTE'
 );
 
 -- Tipo de documento fiscal del cliente

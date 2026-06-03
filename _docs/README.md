@@ -127,3 +127,53 @@ Invalida el JWT de manera real e inmediata mediante la lista de bloqueo (blockli
 
 Para más detalles, consulta el skill específico: 👉 **[03_AUTH_SECURITY.md](./skills/03_AUTH_SECURITY.md)**.
 
+---
+
+## 📦 Módulo de Inventario y Control de Lotes FEFO (Fase 3)
+
+Se ha implementado el backend completo para la gestión física e inventario de trufas. Dado que son productos perecederos, el sistema utiliza un estricto despacho **FEFO (First Expired, First Out)** a través de triggers de base de datos.
+
+### ⚠️ Regla de Oro: Gobernanza Única en NeonDB (PostgreSQL)
+* **Gobernanza del stock:** El backend nunca actualiza directamente `productos.stock_actual` o `lotes.cantidad_disponible`.
+* **Triggers automáticos:**
+  * **Ingreso de lote (`POST /inventory/lots`):** Registra el lote y activa `tg_lotes_post_insert` para sumar el stock y registrar `INGRESO_COMPRA` en el Kardex.
+  * **Ajustes manuales (`POST /inventory/adjustments`):** Registra ajustes de tipo `AJUSTE_POSITIVO`, `AJUSTE_NEGATIVO` o `MERMA`. Activa `tg_movimientos_stock_ajustes` (migración [M09_trigger_ajustes_stock.sql](file:///c:/Users/lordm/Desktop/Proyectos%20y%20clases/UTP%20CICLO%206/Integrador%20de%20Sistemas/proyecto/MitrufelyWeb/_modelBD/M09_trigger_ajustes_stock.sql)) que valida la inmutabilidad de lotes vencidos, actualiza el stock disponible del lote/producto y calcula el `stock_resultante` de forma atómica.
+  * **Ventas:** El trigger de detalles de venta asocia automáticamente lotes vigentes siguiendo el orden FEFO (fecha de vencimiento más próxima).
+
+### 🛠️ Contratos de API de Inventario (Solo ADMIN)
+Todos los endpoints requieren autorización de administrador (Bearer Token con rol `ADMIN`):
+
+#### 1. Registrar Lote (`POST /api/v1/inventory/lots`)
+* **Payload (JSON):**
+  ```json
+  {
+    "id_producto": 1,
+    "cantidad_inicial": 50,
+    "fecha_vencimiento": "2026-06-08T18:04:21Z"
+  }
+  ```
+* **Respuesta (201 Created):** Retorna el lote registrado (con `cantidad_disponible` normalizada a la cantidad inicial y `estado_lote` en `VIGENTE`).
+
+#### 2. Aplicar Ajuste Manual (`POST /api/v1/inventory/adjustments`)
+* **Payload (JSON):**
+  ```json
+  {
+    "id_producto": 1,
+    "id_lote": 12,
+    "tipo_movimiento": "AJUSTE_POSITIVO",
+    "cantidad": 15,
+    "observacion": "Corrección de inventario"
+  }
+  ```
+  *(Tipos permitidos: `AJUSTE_POSITIVO`, `AJUSTE_NEGATIVO`, `MERMA`)*
+* **Respuesta (200 OK):** Retorna el movimiento de stock insertado con el `stock_resultante` real calculado por base de datos.
+
+#### 3. Ver Kardex (`GET /api/v1/inventory/kardex/{producto_id}`)
+* Devuelve el historial de movimientos ordenados cronológicamente de forma descendente.
+
+#### 4. Conciliación de Stock (`GET /api/v1/inventory/reconciliation`)
+* Compara el stock en caché (`productos.stock_actual`) frente al Kardex y las existencias reales por lotes para auditoría de descuadres.
+
+Para más detalles, consulta la documentación técnica específica: 👉 **[fase3_inventario_fefo.md](./fases/fase3_inventario_fefo.md)**.
+
+

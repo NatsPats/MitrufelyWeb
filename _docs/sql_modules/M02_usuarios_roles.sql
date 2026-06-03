@@ -2,7 +2,7 @@
 -- MÓDULO 02: USUARIOS, ROLES Y DATOS FISCALES (MYTRUFELY)
 -- Motor: PostgreSQL
 -- Propósito: Gestión de identidad, autenticación y perfiles
---            de usuario (clientes, admins, cajeros, almacén).
+--            de usuario (clientes, admins).
 -- Depende de: M01_enums_tipos.sql
 --
 -- ACTUALIZACIÓN: Soporte para autenticación con Google OAuth2

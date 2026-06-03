@@ -40,7 +40,7 @@ Están diseñados para ser pasados a la IA como contexto de referencia antes de 
 - **BD:** PostgreSQL (NeonDB) — script físico en `_modelBD/Query1.sql`
 - **Backend:** FastAPI 0.115 + SQLAlchemy 2.0 async + asyncpg + Pydantic v2
 - **Frontend:** React 19 + Vite + TypeScript strict + Tailwind CSS v4
-- **Auth:** JWT HS256 + RBAC (roles: ADMIN, CLIENTE, CAJERO, ALMACEN)
+- **Auth:** JWT HS256 + RBAC (roles: ADMIN, CLIENTE)
 - **Queue:** Celery + Redis broker
 - **API prefix:** `/api/v1`
 - **Response envelope:** `{ success, data, message }` / `{ success, error, request_id }`

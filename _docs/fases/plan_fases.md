@@ -43,7 +43,7 @@ graph TD
   * Lógica algorítmica de egreso estricto **FEFO** (First Expired, First Out) al realizar la venta.
   * Manejo de fechas y zonas horarias con `python-dateutil` y `pytz`.
 * **Frontend (`React + TypeScript`):**
-  * Pantalla de inventario y Kardex reservada exclusivamente para el rol de `ALMACEN` y administradores.
+  * Pantalla de inventario y Kardex reservada exclusivamente para administradores.
   * **Alertas Visuales de Vencimiento Configurable:** El sistema evaluará los días restantes de vida de cada lote. Por defecto, si faltan **3 días** o menos para la fecha de vencimiento (`days_until_expiration <= threshold` usando `date-fns`), el lote se coloreará en ámbar/rojo pastel en el panel de control de inventario para alertar al operario.
 
 ### 🔹 Fase 4: Carrito de Compras y Flujo de Checkout Transaccional

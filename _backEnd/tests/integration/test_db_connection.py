@@ -116,17 +116,17 @@ async def test_model_roles_query(db_session: AsyncSession) -> None:
 @pytest.mark.asyncio
 async def test_all_expected_roles_exist(db_session: AsyncSession) -> None:
     """
-    WHAT: Verifies all 4 expected roles exist in the DB after setup.
+    WHAT: Verifies all expected roles exist in the DB after setup.
     VALIDATES:
       - seed_db.py or M02 insert populated the roles table correctly
-    EXPECTED: ADMIN, CLIENTE, CAJERO, ALMACEN all present.
+    EXPECTED: ADMIN, CLIENTE present.
     """
     from sqlalchemy import select
     stmt = select(Rol.nombre)
     result = await db_session.execute(stmt)
     nombres_en_db = {row[0] for row in result.all()}
 
-    expected = {TipoRolEnum.ADMIN, TipoRolEnum.CLIENTE, TipoRolEnum.CAJERO, TipoRolEnum.ALMACEN}
+    expected = {TipoRolEnum.ADMIN, TipoRolEnum.CLIENTE}
     missing = expected - nombres_en_db
     if missing:
         pytest.skip(

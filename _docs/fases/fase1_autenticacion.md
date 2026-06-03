@@ -17,7 +17,7 @@ ALTER TABLE usuarios ADD COLUMN google_sub VARCHAR(255) UNIQUE;
 
 ### Modelos SQLAlchemy ORM (`app/infrastructure/database/models/usuarios.py`)
 - `Usuario`: Mapeado con campos nullable `password_hash` y `google_sub` para compatibilidad de OAuth, y `auth_provider` (`local` o `google`).
-- `Rol`: Conexión de 1-a-Muchos con `Usuario` basada en el enum `TipoRolEnum` ('ADMIN', 'CLIENTE', 'CAJERO', 'ALMACEN').
+- `Rol`: Conexión de 1-a-Muchos con `Usuario` basada en el enum `TipoRolEnum` ('ADMIN', 'CLIENTE').
 - `Cliente`: Perfil extendido 1-a-1 de `Usuario` para el rol de cliente, creado de manera atómica y transaccional durante el registro.
 
 ---

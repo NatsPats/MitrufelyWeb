@@ -71,7 +71,7 @@ class Rol(Base):
 
 class Usuario(Base):
     """
-    Usuarios del sistema (admin, cajero, almacen, cliente).
+    Usuarios del sistema (admin, cliente).
     Tabla: usuarios | M02_usuarios_roles.sql
     """
     __tablename__ = "usuarios"

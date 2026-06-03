@@ -196,7 +196,7 @@ graph TD
 * **KPIs:** Usuarios totales registrados, Clientes registrados, Usuarios activos, Distribución por rol.
 * **Gráficos:**
   * **Crecimiento de usuarios:** `AreaChart` mostrando la curva de registro acumulado en el tiempo.
-  * **Distribución por roles:** `DonutChart` (ADMIN, CLIENTE, CAJERO, ALMACEN).
+  * **Distribución por roles:** `DonutChart` (ADMIN, CLIENTE).
   * **Actividad reciente del sistema:** `BarChart` de logins diarios.
 
 ### 🍬 6. Dashboard de Fidelización CriptoTrufas / CriptoTrufa

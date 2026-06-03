@@ -209,8 +209,8 @@ PENDIENTE ──pagado──▶ PAGADO ──entregado──▶ ENTREGADO
 | Transición | Quién la ejecuta |
 |---|---|
 | `PENDIENTE` → `PAGADO` | Service: `UPDATE ventas.estado_pago = 'PAGADO'` |
-| `PAGADO` → `ENTREGADO` | Router de CAJERO/ADMIN |
-| Cualquier → `ANULADO` | Solo por ADMIN/CAJERO |
+| `PAGADO` → `ENTREGADO` | Solo ADMIN |
+| Cualquier → `ANULADO` | Solo ADMIN |
 
 ---
 
