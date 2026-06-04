@@ -14,6 +14,7 @@ const HomePage     = lazy(() => import('@/pages/public/HomePage'))
 const DashboardPage = lazy(() => import('@/features/dashboard/pages/DashboardPage'))
 const InventoryPage = lazy(() => import('@/features/inventory/pages/InventoryPage'))
 const CatalogAdminPage = lazy(() => import('@/features/products/pages/CatalogAdminPage'))
+const CatalogPage = lazy(() => import('@/features/catalog/pages/CatalogPage'))
 const OrdersPage = lazy(() => import('@/features/orders/pages/OrdersPage'))
 const ReportsPage = lazy(() => import('@/features/reports/pages/ReportsPage'))
 const CriptoTrufasPage = lazy(() => import('@/features/sweetcoins/pages/SweetCoinsPage'))
@@ -100,7 +101,7 @@ export function AppRouter() {
             {/* Solo ADMIN y MANAGER */}
             <Route element={<RequirePermission permission="VIEW_INVENTORY" />}>
               <Route path="/inventory" element={<InventoryPage />} />
-              <Route path="/catalog" element={<CatalogAdminPage />} />
+              <Route path="/catalog/admin" element={<CatalogAdminPage />} />
             </Route>
 
             {/* ADMIN, MANAGER y CASHIER */}
@@ -120,8 +121,9 @@ export function AppRouter() {
           </Route>
         </Route>
 
-        {/* Ruta principal pública: HomePage */}
+        {/* Rutas públicas */}
         <Route path="/" element={<HomePage />} />
+        <Route path="/catalogo" element={<CatalogPage />} />
 
         {/* Ruta de verificación pública */}
         <Route path="/verify" element={<VerifyPage />} />

@@ -61,7 +61,7 @@ export default function AdminLayout() {
     },
     {
       name: 'Catálogo',
-      href: '/catalog',
+      href: '/catalog/admin',
       icon: ShoppingBag,
       permission: 'VIEW_INVENTORY', // ADMIN, MANAGER, BAKER
     },

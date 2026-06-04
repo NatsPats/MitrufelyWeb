@@ -52,7 +52,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="relative flex min-h-screen w-full items-center justify-center bg-[#f0efed] px-4 py-12 overflow-hidden">
+    <div className="relative flex h-screen w-full items-center justify-center bg-[#f0efed] px-4 overflow-hidden">
       {/* Patrón de Destellos de Fondo Decorativo (Sparkles Pattern) */}
       <div 
         className="absolute inset-0 opacity-[0.08] pointer-events-none" 
@@ -66,7 +66,7 @@ export default function LoginPage() {
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: 'easeOut' }}
-        className="relative z-10 w-full max-w-md bg-[#e6e6e6]/90 backdrop-blur-md rounded-[40px] border-2 border-[#5c0f1b] p-10 md:p-12 shadow-[0_20px_50px_rgba(92,15,27,0.15)]"
+        className="relative z-10 w-full max-w-lg bg-[#e6e6e6]/90 backdrop-blur-md rounded-[40px] border-[#5c0f1b] p-10 md:p-12 shadow-[0_40px_100px_rgba(0,0,0,0.25)]"
       >
         {/* Logotipo Tipográfico estilizado */}
         <div className="text-center mb-8">
@@ -85,7 +85,7 @@ export default function LoginPage() {
         </div>
 
         {/* Formulario */}
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           {/* Campo: Correo Electrónico */}
           <div className="relative group">
             <span className="absolute inset-y-0 left-0 flex items-center pl-4 text-[#5c0f1b]">
@@ -95,10 +95,10 @@ export default function LoginPage() {
               type="email"
               placeholder="Correo Electrónico"
               {...register('email')}
-              className={`w-full bg-[#f0efed]/90 text-[#2a1115] placeholder-[#5c0f1b]/40 rounded-full border-2 pl-12 pr-4 py-3.5 text-base font-medium transition-all outline-none ${
+              className={`w-full bg-[#f0efed]/90 text-[#5c0f1b] placeholder-[#5c0f1b]/40 rounded-full border-2 pl-12 pr-4 py-3.5 text-base font-medium transition-all outline-none focus-visible:!outline-none ${
                 errors.email 
-                  ? 'border-destructive focus:ring-2 focus:ring-destructive' 
-                  : 'border-[#5c0f1b] focus:border-[#ff7a45] focus:ring-2 focus:ring-[#ff7a45]'
+                  ? 'border-destructive focus:border-destructive focus:border-4 focus:ring-0' 
+                  : 'border-[#5c0f1b] focus:border-[#5c0f1b] focus:border-4 focus:ring-0'
               }`}
             />
             {errors.email && (
@@ -122,10 +122,10 @@ export default function LoginPage() {
               type="password"
               placeholder="Contraseña"
               {...register('password')}
-              className={`w-full bg-[#f0efed]/90 text-[#2a1115] placeholder-[#5c0f1b]/40 rounded-full border-2 pl-12 pr-4 py-3.5 text-base font-medium transition-all outline-none ${
+              className={`w-full bg-[#f0efed]/90 text-[#5c0f1b] placeholder-[#5c0f1b]/40 rounded-full border-2 pl-12 pr-4 py-3.5 text-base font-medium transition-all outline-none focus-visible:!outline-none ${
                 errors.password 
-                  ? 'border-destructive focus:ring-2 focus:ring-destructive' 
-                  : 'border-[#5c0f1b] focus:border-[#ff7a45] focus:ring-2 focus:ring-[#ff7a45]'
+                  ? 'border-destructive focus:border-destructive focus:border-4 focus:ring-0' 
+                  : 'border-[#5c0f1b] focus:border-[#5c0f1b] focus:border-4 focus:ring-0'
               }`}
             />
             {errors.password && (
@@ -178,7 +178,7 @@ export default function LoginPage() {
         {/* Divisor visual premium */}
         <div className="relative my-6 flex items-center justify-center">
           <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-[#5c0f1b]/15"></div>
+            <div className="w-full border border-[#5c0f1b]/15"></div>
           </div>
           <span className="relative bg-[#e3e3e3] px-4 text-xs font-black tracking-wider text-[#5c0f1b]/70 uppercase">
             O ingresa con
@@ -191,7 +191,7 @@ export default function LoginPage() {
           whileTap={{ scale: 0.98 }}
           type="button"
           onClick={handleGoogleLogin}
-          className="w-full bg-[#f0efed] text-[#2a1115] hover:bg-[#e6e6e6] py-3.5 rounded-full text-base font-black tracking-wide shadow-sm border-2 border-[#5c0f1b]/20 hover:border-[#5c0f1b] transition-all flex items-center justify-center gap-3"
+          className="w-full bg-[#f0efed] text-[#5c0f1b] hover:bg-[#e6e6e6] py-3.5 rounded-full text-base font-black tracking-wide shadow-sm border-2 border-[#5c0f1b]/20 hover:border-[#5c0f1b] transition-all flex items-center justify-center gap-3"
         >
           <svg className="h-5.5 w-5.5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
             <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>

@@ -7,11 +7,11 @@
  */
 import { forwardRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { toast } from 'sonner'
+import { Link } from 'react-router'
 import { TrufaCard } from './TrufaCard'
 import { TRUFAS_MOCK, CATALOG_TABS } from '../api/mockData'
 import type { TabKey, Trufa } from '../types'
-import { Button } from '@/shared/components/ui/Button'
+
 
 // ─── Props ────────────────────────────────────────────────────────────────
 
@@ -98,16 +98,15 @@ export const CatalogSection = forwardRef<HTMLElement, CatalogSectionProps>(
             </AnimatePresence>
           </motion.div>
 
-          {/* CTA ver todo */}
+          {/* CTA ver todo — navega al Catálogo Público (/catalogo) */}
           <div className="text-center mt-12">
-            <Button
+            <Link
               id="hp-view-all-btn"
-              variant="secondary"
-              onClick={() => toast.info('Catálogo completo próximamente.')}
-              className="px-10 py-3.5 text-sm"
+              to="/catalogo"
+              className="inline-flex items-center justify-center px-10 py-3.5 rounded-full bg-[#5c0f1b] text-white text-sm font-black shadow-lg hover:bg-[#7a1525] transition-all hover:scale-105 active:scale-95"
             >
               Ver todo el catálogo
-            </Button>
+            </Link>
           </div>
         </div>
       </section>

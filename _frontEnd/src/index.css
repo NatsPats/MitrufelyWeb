@@ -110,7 +110,7 @@
   --color-card-foreground: oklch(0.97 0.01 265);
   --color-popover: oklch(0.14 0.02 265);
   --color-popover-foreground: oklch(0.97 0.01 265);
-  --color-primary: oklch(0.72 0.19 24);
+  --color-primary: oklch(28.41% 0.11403 29.29);
   --color-primary-foreground: oklch(0.1 0.02 265);
   --color-secondary: oklch(0.2 0.03 265);
   --color-secondary-foreground: oklch(0.97 0.01 265);
@@ -129,7 +129,7 @@
 *::before,
 *::after {
   box-sizing: border-box;
-  border-color: var(--color-border);
+  border-color: #5c0f1b;
 }
 
 html {
