@@ -1,8 +1,18 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { profileApi, type DatosFiscalesUpsert, type UserProfileUpdate } from '../api/profileApi'
+import { authApi } from '../api/auth.api'
 
 export const FISCAL_QUERY_KEY = ['datos-fiscales'] as const
+export const PROFILE_QUERY_KEY = ['auth', 'me'] as const
+
+export function useProfileData() {
+  return useQuery({
+    queryKey: PROFILE_QUERY_KEY,
+    queryFn: () => authApi.getMe(),
+    staleTime: 60_000,
+  })
+}
 
 export function useDatosFiscales() {
   return useQuery({

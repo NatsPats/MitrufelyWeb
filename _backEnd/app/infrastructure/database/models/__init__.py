@@ -5,7 +5,7 @@ SQLAlchemy mapper registry (Base.metadata) when this package is imported.
 
 Import order follows the SQL module dependency chain:
   M01 (enums) → M02 (usuarios) → M03 (catalogo) → M04 (cupones)
-  → M05 (ventas) → M06 (recompensas)
+  → M05 (ventas) → M06 (recompensas) → M14 (pedidos_ext)
 
 IMPORTANT: All models must be imported here BEFORE any query or migration
 runs. Failing to import a model means its table will be unknown to Base.metadata.
@@ -14,6 +14,8 @@ runs. Failing to import a model means its table will be unknown to Base.metadata
 # ── Enums (M01) ───────────────────────────────────────────────────────────────
 from app.infrastructure.database.models.enums import (  # noqa: F401
     EstadoCuponEnum,
+    EstadoEntregaEnum,
+    EstadoIncidenciaEnum,
     EstadoLoteEnum,
     EstadoPagoEnum,
     EstadoTransaccionEnum,
@@ -22,8 +24,11 @@ from app.infrastructure.database.models.enums import (  # noqa: F401
     OrigenVentaEnum,
     TipoDocumentoFiscalEnum,
     TipoDocumentoVentaEnum,
+    TipoEventoVentaEnum,
+    TipoIncidenciaEnum,
     TipoMovimientoPuntosEnum,
     TipoMovimientoStockEnum,
+    TipoNotificacionEnum,
     TipoPagoEnum,
     TipoRolEnum,
 )
@@ -70,8 +75,18 @@ from app.infrastructure.database.models.recompensas import (  # noqa: F401
     MovimientoPuntos,
 )
 
+# ── Pedidos Extendido (M14) ───────────────────────────────────────────────────
+from app.infrastructure.database.models.pedidos_ext import (  # noqa: F401
+    Notification,
+    OrderEvent,
+    OrderIssue,
+    OrderRefund,
+    OrderReview,
+    SystemConfig,
+)
+
 __all__ = [
-    # Enums
+    # Enums M01
     "TipoRolEnum",
     "TipoDocumentoFiscalEnum",
     "EstadoLoteEnum",
@@ -85,6 +100,12 @@ __all__ = [
     "EstadoTransaccionEnum",
     "TipoDocumentoVentaEnum",
     "TipoMovimientoPuntosEnum",
+    # M14 Enums
+    "TipoEventoVentaEnum",
+    "EstadoEntregaEnum",
+    "TipoIncidenciaEnum",
+    "EstadoIncidenciaEnum",
+    "TipoNotificacionEnum",
     # M02
     "Rol",
     "Usuario",
@@ -112,4 +133,11 @@ __all__ = [
     # M06
     "ConfiguracionRecompensas",
     "MovimientoPuntos",
+    # M14
+    "OrderEvent",
+    "OrderRefund",
+    "OrderReview",
+    "OrderIssue",
+    "SystemConfig",
+    "Notification",
 ]

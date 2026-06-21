@@ -1,0 +1,147 @@
+services:
+
+  # ── FastAPI Application ────────────────────────────────────────────────────
+  api:
+    build:
+      context: ./_backEnd
+      dockerfile: Dockerfile
+      target: development
+    command:
+      - uvicorn
+      - app.main:app
+      - --host
+      - "0.0.0.0"
+      - --port
+      - "8000"
+      - --reload
+      - --reload-dir
+      - /app
+      - --log-level
+      - info
+    volumes:
+      - ./_backEnd:/app
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      - APP_ENV=development
+      - DEBUG=true
+      - PYTHONPATH=/app
+      - WATCHFILES_FORCE_POLLING=true
+      - WATCHFILES_POLL_DELAY_MS=1000
+    env_file:
+      - ./_backEnd/.env
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - mifrufely-net
+    restart: on-failure
+
+  # ── Delivery Microservice ──────────────────────────────────────────────────
+  delivery-service:
+    build:
+      context: ./_deliveryService
+      dockerfile: Dockerfile
+    command:
+      - uvicorn
+      - main:app
+      - --host
+      - "0.0.0.0"
+      - --port
+      - "8001"
+      - --reload
+    volumes:
+      - ./_deliveryService:/app
+    ports:
+      - "127.0.0.1:8001:8001"
+    environment:
+      - BACKEND_URL=http://api:8000
+      - DELIVERY_WEBHOOK_TOKEN=dev-webhook-token
+      - PREPARATION_DELAY_SECONDS=5
+      - DELIVERY_DELAY_SECONDS=10
+    networks:
+      - mifrufely-net
+    restart: on-failure
+
+  # ── Redis ──────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7.2-alpine
+    ports:
+      - "127.0.0.1:6399:6399"
+    command: redis-server --port 6399 --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-p", "6399", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - mifrufely-net
+    restart: unless-stopped
+
+  # ── Celery Worker ──────────────────────────────────────────────────────────
+  celery_worker:
+    build:
+      context: ./_backEnd
+      dockerfile: Dockerfile
+      target: development
+    command:
+      - celery
+      - -A
+      - app.infrastructure.workers.celery_app
+      - worker
+      - --loglevel=info
+      - --concurrency=2
+      - -Q
+      - celery
+    volumes:
+      - ./_backEnd:/app
+    environment:
+      - PYTHONPATH=/app
+    env_file:
+      - ./_backEnd/.env
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - mifrufely-net
+    restart: on-failure
+
+  # ── Celery Beat (Scheduler) ────────────────────────────────────────────────
+  celery_beat:
+    build:
+      context: ./_backEnd
+      dockerfile: Dockerfile
+      target: development
+    command:
+      - celery
+      - -A
+      - app.infrastructure.workers.celery_app
+      - beat
+      - --loglevel=info
+      - --scheduler
+      - celery.beat:PersistentScheduler
+      - --schedule
+      - /var/celerybeat/celerybeat-schedule
+    volumes:
+      - ./_backEnd:/app
+      - beat_schedule:/var/celerybeat
+    environment:
+      - PYTHONPATH=/app
+    env_file:
+      - ./_backEnd/.env
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - mifrufely-net
+    restart: on-failure
+
+volumes:
+  redis_data:
+  beat_schedule:
+
+networks:
+  mifrufely-net:
+    driver: bridge

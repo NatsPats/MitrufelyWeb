@@ -17,6 +17,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Home,
+  MessageSquare,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -89,6 +90,12 @@ export default function AdminLayout() {
       href: '/sweetcoins',
       icon: Coins,
       permission: 'VIEW_SWEETCOINS', // ADMIN, MANAGER, CUSTOMER
+    },
+    {
+      name: 'Atención al Cliente',
+      href: '/dashboard/atencion-cliente',
+      icon: MessageSquare,
+      permission: 'VIEW_REPORTS', // ADMIN, MANAGER
     },
   ]
 

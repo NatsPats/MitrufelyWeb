@@ -246,8 +246,8 @@ export function CatalogSidebar({
         <Accordion title="Rango de precio">
           <div className="space-y-4 py-2">
             <div className="flex justify-between text-sm font-black text-[#5c0f1b]">
-              <span>S/. {filters.priceRange.min.toFixed(0)}</span>
-              <span>S/. {filters.priceRange.max.toFixed(0)}</span>
+              <span>S/. {Number(filters.priceRange.min || 0).toFixed(0)}</span>
+              <span>S/. {Number(filters.priceRange.max || 0).toFixed(0)}</span>
             </div>
             <div className="space-y-2">
               <label className="text-[10px] font-black text-stone-400 uppercase tracking-wider">Mínimo</label>

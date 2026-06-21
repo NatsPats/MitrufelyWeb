@@ -1,6 +1,6 @@
 # Plan de Fases de Desarrollo — MitrufelyWeb
 
-Este plan de desarrollo traza el camino detallado y formal desde el estado actual (Fase 1 completada con éxito) hasta la finalización total del proyecto **MitrufelyWeb**, asegurando un acoplamiento modular limpio y una arquitectura de inyección de dependencias sólida.
+Este plan de desarrollo traza el camino detallado y formal desde el estado actual hasta la finalización total del proyecto **MitrufelyWeb**, asegurando un acoplamiento modular limpio y una arquitectura de inyección de dependencias sólida.
 
 ---
 
@@ -11,9 +11,10 @@ graph TD
     F1[Fase 1: Autenticación & Seguridad] -->|✅ Completado| F2[Fase 2: Catálogo & Categorías]
     F2 -->|✅ Completado| F3[Fase 3: Inventario & Control FEFO]
     F3 -->|✅ Completado| F4[Fase 4: Carrito & Checkout Transaccional]
-    F4 --> F5[Fase 5: Recompensas CriptoTrufas]
-    F5 --> F6[Fase 6: Dashboard, Reportes PDF/Excel]
-    F6 --> F7[Fase 7: Pruebas, Optimización & Despliegue]
+    F4 -->|✅ Completado| F5[Fase 5: Sistema de Pedidos y E-Commerce Extendido]
+    F5 --> F6[Fase 6: Recompensas CriptoTrufas]
+    F6 --> F7[Fase 7: Dashboard, Reportes PDF/Excel]
+    F7 --> F8[Fase 8: Pruebas, Optimización & Despliegue]
 ```
 
 ---
@@ -48,23 +49,27 @@ graph TD
 
 ### 🔹 Fase 4: Carrito de Compras y Flujo de Checkout Transaccional ✅ IMPLEMENTADO
 * **Objetivo:** Permitir a los clientes armar su pedido, realizar el checkout y descontar stock garantizando la integridad de datos bajo concurrencia.
-* **Alcance universitario:** Sin pasarelas de pago reales (Culqi, Izipay, MercadoPago). La venta se crea como PENDIENTE/PENDIENTE y un admin la marca como PAGADA para pruebas.
 * **Backend (`FastAPI`):**
   * Persistencia del carrito de compras en Redis (`cart:{user_id}`, TTL 7 días, sliding expiration).
   * **Flujo Transaccional con Gobernanza en PostgreSQL:**
     * Validaciones pre-transaccionales sin lock (fast-fail).
     * Transacción única con `async with session.begin()`.
-    * **Integridad de Concurrencia:** Los triggers de PostgreSQL usan `SELECT ... FOR UPDATE` sobre `productos` y `lotes` para serializar accesos concurrentes y prevenir overselling.
-    * Expansión de paquetes en `detalles_venta` (FEFO opera solo sobre productos físicos).
-    * Cálculo de `base_imponible` e `igv` (18%) en backend.
-    * Generación automática de `Documento` (BOLETA) en la misma transacción.
-    * `PUT /ventas/{id}/pagar` (ADMIN) marca venta como PAGADA → dispara `tg_ventas_otorgar_puntos`.
-  * Expiración automática de ventas pendientes: Celery cada 5 minutos (`expire_pending`).
-* **Frontend (`React + TypeScript`):**
-  * Pendiente de implementación.
-* **Estado:** ✅ Backend completo con 50 tests (unit + E2E + integration).
+    * Integridad de Concurrencia con `SELECT ... FOR UPDATE` sobre `productos` y `lotes`.
+    * Generación automática de `Documento` (BOLETA).
 
-### 🔹 Fase 5: Sistema de Fidelización CriptoTrufas y Cuponería
+### 🔹 Fase 5: Sistema de Pedidos y E-Commerce (Extendido) ✅ IMPLEMENTADO
+* **Objetivo:** Auditar y rediseñar el ciclo de vida del pedido para convertirlo en un sistema de e-commerce moderno, robusto y escalable.
+* **Backend (`FastAPI`):**
+  * Máquina de estados finita (FSM) inmutable con estados: `PENDIENTE`, `PAGADO`, `PREPARANDO`, `EN_CAMINO`, `ENTREGADO`, `CANCELADO`, `DEVUELTO`, `REEMBOLSADO`, `ANULADO`.
+  * Tabla de historial cronológico inmutable (`order_events`).
+  * Microservicio asíncrono para simular preparación y entrega (`delivery-service` en puerto 8001).
+  * Configuración dinámica en BD (`system_config`) para costos de envío (S/3.00 base, gratis > S/15.00) y tiempos de entrega (ETA calculable en tiempo real).
+  * Sistema completo de incidencias (`order_issues`), devoluciones y reembolsos simulados con reposición automática al Kardex.
+  * Endpoints completos de tracking para el cliente (`GET /ventas/{id}/tracking`).
+  * Panel de métricas e ingresos integrados y dashboard en vivo con conteo por estados, ranking de productos y tendencias en los últimos 30 días.
+  * Tabla de `notifications` integradas para informar al cliente de sus cambios de estado y resolver los reportes (polling nativo).
+
+### 🔹 Fase 6: Sistema de Fidelización CriptoTrufas y Cuponería
 * **Objetivo:** Gamificar la pastelería mediante la moneda interna virtual del proyecto (CriptoTrufas), otorgando puntos por compras e incentivando canjes por cupones de descuento.
 * **Backend (`FastAPI`):**
   * Lógica de acumulación de puntos (por ejemplo, 10% del monto total de la venta en CriptoTrufas).
@@ -75,27 +80,25 @@ graph TD
   * Vitrina de canje de cupones con animaciones dinámicas de felicitación (`framer-motion` + `canvas-confetti`).
   * Integración en el Checkout para seleccionar y aplicar cupones de descuento válidos con recálculo dinámico del total de compra.
 
-### 🔹 Fase 6: Panel de Administración, Reportes y Documentos (PDF/Excel)
-* **Objetivo:** Proveer herramientas visuales y descargables para que los administradores controlen el negocio y los clientes obtengan sus comprobantes formales, siguiendo los lineamientos de diseño e implementación del skill [`11_ANALYTICS_BI.md`](../skills/11_ANALYTICS_BI.md).
+### 🔹 Fase 7: Panel de Administración, Reportes y Documentos (PDF/Excel)
+* **Objetivo:** Proveer herramientas visuales y descargables para que los administradores controlen el negocio y los clientes obtengan sus comprobantes formales.
 * **Backend (`FastAPI`):**
-  * Generación asíncrona de reportes agregados y KPIs en segundo plano utilizando `celery` para evitar bloqueos del servidor.
-  * **Generación de Comprobantes PDF con WeasyPrint:** Se utiliza exclusivamente `WeasyPrint` para la conversión de plantillas HTML/CSS premium a PDF, lo que proporciona control tipográfico y de diseño absoluto (soporte CSS completo). Se elimina `ReportLab` por redundancia.
-  * Generación de archivos Excel de Kardex y ventas en el servidor usando `openpyxl` y `xlsxwriter`.
+  * Generación asíncrona de reportes agregados y KPIs en segundo plano utilizando `celery`.
+  * **Generación de Comprobantes PDF con WeasyPrint:** Se utiliza exclusivamente `WeasyPrint` para la conversión de plantillas HTML/CSS premium a PDF.
+  * Generación de archivos Excel de Kardex y ventas usando `openpyxl` y `xlsxwriter`.
 * **Frontend (`React + TypeScript`):**
-  * Dashboard premium para administradores con KPIs interactivos y gráficos SVG responsivos usando la librería `recharts`, respetando la **Opción A** de colores de marca corporativos (Borgoña y Naranja) y estructurando los 7 dashboards especializados definidos en la documentación técnica.
-  * Integración de descargas en el cliente de reportes PDF y Excel de forma asíncrona.
-  * Uso de librerías en el cliente como `jspdf` y `exceljs` para descargas inmediatas sin carga en el servidor cuando sea viable.
+  * Dashboard premium para administradores con KPIs interactivos y gráficos SVG responsivos usando la librería `recharts`.
+  * Uso de librerías en el cliente como `jspdf` y `exceljs` para descargas inmediatas.
 
-### 🔹 Fase 7: Pruebas, Optimización y Despliegue
+### 🔹 Fase 8: Pruebas, Optimización y Despliegue
 * **Objetivo:** Optimizar el rendimiento de la aplicación, asegurar su robustez con cobertura de pruebas automatizadas y realizar el despliegue a producción.
 * **Backend (`FastAPI`):**
-  * Pruebas unitarias e integración de base de datos asíncronas usando `pytest` + `pytest-asyncio` + `factory-boy`.
+  * Pruebas unitarias e integración de base de datos asíncronas usando `pytest` + `pytest-asyncio`.
   * Caché de Redis de endpoints de catálogo con TTL inteligente.
   * Instrumentación de logs JSON estructurados (`structlog`) y exposición de métricas Prometheus (`prometheus-fastapi-instrumentator`).
 * **Frontend (`React + TypeScript`):**
   * Optimización automática de re-renders mediante `babel-plugin-react-compiler` de React 19.
-  * Gestión automatizada pre-commit mediante `husky` y `lint-staged` para linteado y formato estricto antes del commit.
+  * Gestión automatizada pre-commit mediante `husky` y `lint-staged`.
 * **Infraestructura:**
   * Configuración completa de orquestación de contenedores en Docker.
   * Despliegue automatizado de la API, worker de Celery y base de datos Neon en la nube con Render (`render.yaml`).
-

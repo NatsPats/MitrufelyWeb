@@ -14,6 +14,8 @@ import { toast } from 'sonner'
 import { useAuthStore } from '@/app/store'
 import { useState, useEffect, useRef } from 'react'
 import { PublicNav } from './PublicNav'
+import { NotificationBell } from '@/features/notifications/components/NotificationBell'
+import { useOrdersQuery } from '@/features/orders/hooks/useOrders'
 
 // ─── Props ────────────────────────────────────────────────────────────────
 
@@ -77,6 +79,48 @@ export function PublicHeader({
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
+  // ── Notificaciones de Calificación Pendiente ──────────────────────────────
+  const { data: orders = [] } = useOrdersQuery()
+  const pendingReviews = orders.filter((o) => o.estado === 'ENTREGADO' && !o.has_review)
+  useEffect(() => {
+    const alreadyNotified = sessionStorage.getItem('pendingReviewsNotified')
+    if (isAuthenticated && pendingReviews.length > 0 && !alreadyNotified) {
+      toast.custom((t) => (
+        <div className="bg-white border-2 border-yellow-400 rounded-2xl p-4 shadow-xl flex gap-4 items-start w-full sm:w-[350px]">
+          <div className="h-10 w-10 bg-yellow-100 rounded-full flex items-center justify-center shrink-0">
+            <Star className="h-5 w-5 text-yellow-600 fill-yellow-600" />
+          </div>
+          <div className="flex-1">
+            <h3 className="font-black text-[#5c0f1b] text-base" style={{ fontFamily: "'Outfit', sans-serif" }}>
+              ¡Hola{userName ? `, ${userName.split(' ')[0]}` : ''}!
+            </h3>
+            <p className="text-xs text-[#2a1115]/70 font-medium mt-0.5">
+              Tienes {pendingReviews.length} pedido(s) entregado(s) esperando tu calificación.
+            </p>
+            <div className="flex gap-2 mt-3">
+              <button
+                onClick={() => {
+                  toast.dismiss(t)
+                  navigate('/mi-cuenta/pedidos')
+                }}
+                className="px-4 py-1.5 bg-yellow-400 hover:bg-yellow-500 text-yellow-900 font-bold text-xs rounded-xl transition-colors"
+              >
+                Calificar ahora
+              </button>
+              <button
+                onClick={() => toast.dismiss(t)}
+                className="px-4 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-600 font-bold text-xs rounded-xl transition-colors"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      ), { id: 'pending-reviews', duration: 10000 })
+      sessionStorage.setItem('pendingReviewsNotified', 'true')
+    }
+  }, [isAuthenticated, pendingReviews.length, navigate, userName])
+
   return (
     <motion.div
       animate={{ y: visible ? 0 : '-100%' }}
@@ -119,6 +163,11 @@ export function PublicHeader({
               {coinsBalance !== null ? coinsBalance.toLocaleString() : '2000'}
             </span>
           </div>
+
+          {/* Notificaciones (M14) */}
+          {isAuthenticated && (
+            <NotificationBell />
+          )}
 
           {/* Favoritos */}
           <button

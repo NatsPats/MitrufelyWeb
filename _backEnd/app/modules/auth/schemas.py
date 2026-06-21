@@ -61,6 +61,14 @@ class RolResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class ClienteResponse(BaseModel):
+    direccion: str | None = None
+    referencia: str | None = None
+    telefono: str | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class UserMeResponse(BaseModel):
     id_usuario: int
     nombres: str
@@ -70,6 +78,7 @@ class UserMeResponse(BaseModel):
     estado: bool
     auth_provider: str
     rol: RolResponse
+    cliente: ClienteResponse | None = None
 
     model_config = ConfigDict(from_attributes=True)
 

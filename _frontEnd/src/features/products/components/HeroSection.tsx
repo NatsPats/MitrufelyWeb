@@ -12,7 +12,7 @@
  *   - Tarjetas flotantes con animación suave (framer-motion)
  */
 
-import { Star } from 'lucide-react'
+
 import { motion, type Variants } from 'framer-motion'
 import { Button } from '@/shared/components/ui/Button'
 
@@ -49,17 +49,7 @@ const textItem: Variants = {
   show:   { opacity: 1, y: 0, transition: { type: 'spring', damping: 20, stiffness: 100 } },
 }
 
-/** Tarjeta flotante izquierda: precio */
-const cardLeft: Variants = {
-  hidden: { opacity: 0, x: -20 },
-  show:   { opacity: 1, x: 0, transition: { type: 'spring', damping: 22, stiffness: 120, delay: 0.55 } },
-}
 
-/** Tarjeta flotante derecha: puntos */
-const cardRight: Variants = {
-  hidden: { opacity: 0, x: 20 },
-  show:   { opacity: 1, x: 0, transition: { type: 'spring', damping: 22, stiffness: 120, delay: 0.7 } },
-}
 
 // ─── Componente ───────────────────────────────────────────────────────────
 

@@ -12,7 +12,7 @@ import {
 import { cn } from '@/lib/utils'
 
 import type { VentaResponse } from '../types'
-import { useOrdersQuery, useConfirmEntregaMutation } from '../hooks/useOrders'
+import { useOrdersQuery, useTransitionVentaMutation } from '../hooks/useOrders'
 import { AdminDataTable } from '@/features/products/components/AdminDataTable'
 
 // Helper for formatting date
@@ -31,6 +31,13 @@ export default function OrdersPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [paymentFilter, setPaymentFilter] = useState<string>('all')
 
+  // Estado para el modal de confirmación personalizado
+  const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean; id: number | null; action: string | null }>({
+    isOpen: false,
+    id: null,
+    action: null,
+  })
+
   // Query sales
   const {
     data: orders = [],
@@ -40,14 +47,23 @@ export default function OrdersPage() {
     limit: 100, // Fetch top 100 for client side filter & sorting in DataTable
   })
 
-  // Confirm payment mutation
-  const confirmEntregaMut = useConfirmEntregaMutation()
+  // Mutation for state transitions (M14)
+  const transitionMut = useTransitionVentaMutation()
 
-  const handleConfirmPayment = (id: number, e: React.MouseEvent) => {
+  const handleTransition = (id: number, action: string, e: React.MouseEvent) => {
     e.preventDefault()
-    if (confirm(`¿Estás seguro de que deseas confirmar el pago de la venta #${id}?`)) {
-      confirmEntregaMut.mutate(id)
+    setConfirmModal({ isOpen: true, id, action })
+  }
+
+  const confirmTransition = () => {
+    if (confirmModal.id && confirmModal.action) {
+      transitionMut.mutate({ id: confirmModal.id, action: confirmModal.action })
     }
+    setConfirmModal({ isOpen: false, id: null, action: null })
+  }
+
+  const closeConfirmModal = () => {
+    setConfirmModal({ isOpen: false, id: null, action: null })
   }
 
   // Filter orders on client side to enable clean dashboard-like control
@@ -152,8 +168,7 @@ export default function OrdersPage() {
         header: 'Acciones',
         cell: ({ row }) => {
           const order = row.original
-          const canEntregar = order.estado === 'PENDIENTE' || order.estado === 'PAGADO'
-
+          
           return (
             <div className="flex items-center gap-2">
               <Link
@@ -163,23 +178,41 @@ export default function OrdersPage() {
               >
                 <Eye className="h-4 w-4" />
               </Link>
-              {canEntregar && (
-                <button
-                  onClick={(e) => handleConfirmPayment(order.id_venta, e)}
-                  disabled={confirmEntregaMut.isPending}
-                  className="inline-flex items-center justify-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white px-2 py-1.5 rounded-lg text-xs font-black transition-all hover:scale-102 active:scale-95 border-none cursor-pointer"
-                  title="Marcar como Entregada"
-                >
-                  <CheckCircle2 className="h-3.5 w-3.5" />
-                  Marcar Entregada
+              
+              <div className="relative group">
+                <button className="inline-flex items-center justify-center px-2 py-1.5 rounded-lg border border-stone-200 hover:bg-stone-50 text-xs font-bold text-stone-600">
+                  Acciones ▼
                 </button>
-              )}
+                <div className="absolute right-0 mt-1 w-36 bg-white border border-stone-200 rounded-xl shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 overflow-hidden">
+                  {order.estado === 'PENDIENTE' && (
+                    <>
+                      <button onClick={(e) => handleTransition(order.id_venta, 'pagar', e)} className="w-full text-left px-3 py-2 text-xs font-bold hover:bg-blue-50 text-blue-700">Marcar Pagado</button>
+                      <button onClick={(e) => handleTransition(order.id_venta, 'cancelar', e)} className="w-full text-left px-3 py-2 text-xs font-bold hover:bg-red-50 text-red-700">Cancelar</button>
+                    </>
+                  )}
+                  {order.estado === 'PAGADO' && (
+                    <>
+                      <button onClick={(e) => handleTransition(order.id_venta, 'preparar', e)} className="w-full text-left px-3 py-2 text-xs font-bold hover:bg-orange-50 text-orange-700">Preparar</button>
+                      <button onClick={(e) => handleTransition(order.id_venta, 'reembolsar', e)} className="w-full text-left px-3 py-2 text-xs font-bold hover:bg-purple-50 text-purple-700">Reembolsar</button>
+                    </>
+                  )}
+                  {order.estado === 'PREPARANDO' && (
+                    <button onClick={(e) => handleTransition(order.id_venta, 'despachar', e)} className="w-full text-left px-3 py-2 text-xs font-bold hover:bg-indigo-50 text-indigo-700">Despachar</button>
+                  )}
+                  {order.estado === 'EN_CAMINO' && (
+                    <button onClick={(e) => handleTransition(order.id_venta, 'entregar', e)} className="w-full text-left px-3 py-2 text-xs font-bold hover:bg-emerald-50 text-emerald-700">Entregar</button>
+                  )}
+                  {order.estado === 'ENTREGADO' && (
+                    <button onClick={(e) => handleTransition(order.id_venta, 'devolver', e)} className="w-full text-left px-3 py-2 text-xs font-bold hover:bg-rose-50 text-rose-700">Devolver</button>
+                  )}
+                </div>
+              </div>
             </div>
           )
         },
       },
     ],
-    [confirmEntregaMut.isPending]
+    [transitionMut.isPending]
   )
 
   return (
@@ -271,6 +304,32 @@ export default function OrdersPage() {
           />
         )}
       </main>
+
+      {/* Modal de Confirmación Custom */}
+      {confirmModal.isOpen && (
+        <div className="fixed inset-0 z-[200] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl relative border border-[#5c0f1b]/10 animate-in fade-in zoom-in duration-200">
+            <h3 className="text-lg font-black text-[#5c0f1b] mb-2" style={{ fontFamily: "'Outfit', sans-serif" }}>Confirmar Acción</h3>
+            <p className="text-sm text-stone-600 mb-6">
+              ¿Estás seguro de que deseas aplicar la acción <strong>'{confirmModal.action}'</strong> a la venta <strong>#{confirmModal.id}</strong>?
+            </p>
+            <div className="flex gap-3">
+              <button 
+                onClick={closeConfirmModal}
+                className="flex-1 py-2.5 rounded-xl border border-stone-200 text-stone-600 font-bold text-sm hover:bg-stone-50 transition-all cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button 
+                onClick={confirmTransition}
+                className="flex-1 py-2.5 rounded-xl bg-[#5c0f1b] text-white font-bold text-sm hover:bg-[#7a1525] transition-all cursor-pointer shadow-md"
+              >
+                Sí, aplicar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

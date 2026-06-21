@@ -11,7 +11,7 @@ import { toast } from 'sonner'
 import { ShoppingCart, ShoppingBag, Package, ArrowLeft, Plus, Minus, Loader2, AlertTriangle } from 'lucide-react'
 import { useAuthStore } from '@/app/store'
 import { PublicHeader } from '@/shared/components/layout/PublicHeader'
-import { PublicNav } from '@/shared/components/layout/PublicNav'
+
 import { PublicFooter } from '@/shared/components/layout/PublicFooter'
 import { useCartItemCount } from '@/features/cart/hooks/useCart'
 import { useAddCartItem } from '@/features/cart/hooks/useCart'

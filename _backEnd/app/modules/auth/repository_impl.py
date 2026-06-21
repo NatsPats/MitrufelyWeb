@@ -29,7 +29,10 @@ class SQLAlchemyAuthRepository(AbstractAuthRepository):
         """
         stmt = (
             select(Usuario)
-            .options(selectinload(Usuario.rol))
+            .options(
+                selectinload(Usuario.rol),
+                selectinload(Usuario.cliente),
+            )
             .where(Usuario.id_usuario == pk)
         )
         result = await self._session.execute(stmt)
@@ -43,7 +46,10 @@ class SQLAlchemyAuthRepository(AbstractAuthRepository):
         """
         stmt = (
             select(Usuario)
-            .options(selectinload(Usuario.rol))
+            .options(
+                selectinload(Usuario.rol),
+                selectinload(Usuario.cliente),
+            )
             .where(Usuario.email == email)
         )
         result = await self._session.execute(stmt)

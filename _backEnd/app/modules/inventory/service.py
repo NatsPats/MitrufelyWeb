@@ -102,7 +102,7 @@ class InventoryService:
 
     async def list_lotes_by_producto(
         self,
-        id_producto: int,
+        id_producto: int | None,
         solo_vigentes: bool = True,
     ) -> list[LoteResponse]:
         """Lista los lotes de un producto en orden FEFO."""
@@ -167,7 +167,7 @@ class InventoryService:
 
     async def get_kardex(
         self,
-        id_producto: int,
+        id_producto: int | None,
         params: PaginationParams,
     ) -> PaginatedResponse[MovimientoStockResponse]:
         """Retorna el Kardex paginado de un producto, ordenado por fecha descendente."""

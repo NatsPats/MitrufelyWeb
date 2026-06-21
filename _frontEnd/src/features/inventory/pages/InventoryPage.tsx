@@ -323,7 +323,7 @@ export default function InventoryPage() {
                   }}
                   className="w-full px-3.5 py-2.5 text-sm bg-stone-50 border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5c0f1b]/20 focus:border-[#5c0f1b] transition-all text-[#2a1115] cursor-pointer font-bold"
                 >
-                  <option value="">-- Elige un producto --</option>
+                  <option value="">-- Todos los productos --</option>
                   {productsList.map((p) => (
                     <option key={p.id_producto} value={p.id_producto}>
                       {p.nombre} (Stock: {p.stock_actual} uds)
@@ -332,7 +332,13 @@ export default function InventoryPage() {
                 </select>
               </div>
 
-              {selectedLotsProductId && (
+              {selectedLotsProductId === null && (
+                <div className="text-right">
+                  <span className="text-[10px] font-black uppercase text-stone-400 block">Vista actual</span>
+                  <span className="text-sm font-extrabold text-[#5c0f1b]">Todos los lotes (Orden de Ingreso)</span>
+                </div>
+              )}
+              {selectedLotsProductId !== null && (
                 <div className="text-right">
                   <span className="text-[10px] font-black uppercase text-stone-400 block">Producto Seleccionado</span>
                   <span className="text-sm font-extrabold text-[#5c0f1b]">
@@ -342,24 +348,18 @@ export default function InventoryPage() {
               )}
             </div>
 
-            {selectedLotsProductId ? (
-              lotsError ? (
-                <div className="bg-red-50 border border-red-200 p-4 rounded-xl flex items-center gap-3 text-red-700 text-xs font-semibold">
-                  <span>Error al cargar lotes físicos del servidor. Revisa tu conexión.</span>
-                </div>
-              ) : (
-                <LotsTable
-                  lots={lotsData}
-                  productsList={productsList}
-                  isLoading={lotsLoading}
-                  onAdjustStock={(lot) => handleOpenAdjustModal(lot)}
-                  onViewKardex={handleViewKardex}
-                />
-              )
-            ) : (
-              <div className="bg-stone-50 border border-stone-200/60 p-8 rounded-2xl text-center text-stone-400 font-medium text-sm">
-                Selecciona un producto arriba para visualizar sus lotes físicos vigentes.
+            {lotsError ? (
+              <div className="bg-red-50 border border-red-200 p-4 rounded-xl flex items-center gap-3 text-red-700 text-xs font-semibold">
+                <span>Error al cargar lotes físicos del servidor. Revisa tu conexión.</span>
               </div>
+            ) : (
+              <LotsTable
+                lots={lotsData}
+                productsList={productsList}
+                isLoading={lotsLoading}
+                onAdjustStock={(lot) => handleOpenAdjustModal(lot)}
+                onViewKardex={handleViewKardex}
+              />
             )}
           </div>
         )}
@@ -380,7 +380,7 @@ export default function InventoryPage() {
                   }}
                   className="w-full px-3.5 py-2.5 text-sm bg-stone-50 border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5c0f1b]/20 focus:border-[#5c0f1b] transition-all text-[#2a1115] cursor-pointer font-bold"
                 >
-                  <option value="">-- Elige un producto --</option>
+                  <option value="">-- Todos los productos --</option>
                   {productsList.map((p) => (
                     <option key={p.id_producto} value={p.id_producto}>
                       {p.nombre} (Stock: {p.stock_actual} uds)
@@ -389,7 +389,13 @@ export default function InventoryPage() {
                 </select>
               </div>
 
-              {selectedKardexProductId && (
+              {selectedKardexProductId === null && (
+                <div className="text-right">
+                  <span className="text-[10px] font-black uppercase text-stone-400 block">Vista actual</span>
+                  <span className="text-sm font-extrabold text-[#5c0f1b]">Kardex Global (Orden de Ingreso)</span>
+                </div>
+              )}
+              {selectedKardexProductId !== null && (
                 <div className="text-right">
                   <span className="text-[10px] font-black uppercase text-stone-400 block">Vista actual</span>
                   <span className="text-sm font-extrabold text-[#5c0f1b]">{selectedProductName}</span>
@@ -397,28 +403,22 @@ export default function InventoryPage() {
               )}
             </div>
 
-            {selectedKardexProductId ? (
-              <AdminDataTable
-                columns={inlineKardexColumns}
-                data={inlineKardexData?.items || []}
-                searchKey="tipo_movimiento"
-                searchPlaceholder="Filtrar movimientos..."
-                isLoading={inlineKardexLoading}
-                pageCount={inlineKardexData?.pages || 1}
-                pageIndex={inlineKardexPage}
-                pageSize={inlineKardexPageSize}
-                totalCount={inlineKardexData?.total || 0}
-                onPageChange={(page) => setInlineKardexPage(page - 1)}
-                onPageSizeChange={(size) => {
-                  setInlineKardexPageSize(size)
-                  setInlineKardexPage(0)
-                }}
-              />
-            ) : (
-              <div className="bg-stone-50 border border-stone-200/60 p-8 rounded-2xl text-center text-stone-400 font-medium text-sm">
-                Selecciona un producto arriba para visualizar su historial de Kardex.
-              </div>
-            )}
+            <AdminDataTable
+              columns={inlineKardexColumns}
+              data={inlineKardexData?.items || []}
+              searchKey="tipo_movimiento"
+              searchPlaceholder="Filtrar movimientos..."
+              isLoading={inlineKardexLoading}
+              pageCount={inlineKardexData?.pages || 1}
+              pageIndex={inlineKardexPage}
+              pageSize={inlineKardexPageSize}
+              totalCount={inlineKardexData?.total || 0}
+              onPageChange={(page) => setInlineKardexPage(page - 1)}
+              onPageSizeChange={(size) => {
+                setInlineKardexPageSize(size)
+                setInlineKardexPage(0)
+              }}
+            />
           </div>
         )}
 

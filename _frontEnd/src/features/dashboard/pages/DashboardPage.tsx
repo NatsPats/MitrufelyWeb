@@ -160,11 +160,11 @@ export default function DashboardPage() {
               </div>
               <div className="mt-4 flex items-baseline gap-2">
                 <span className="text-2xl font-black text-[#5c0f1b]" style={{ fontFamily: "'Outfit', sans-serif" }}>
-                  S/. {stats.totalRevenue.toFixed(2)}
+                  S/. {Number(stats.totalRevenue || 0).toFixed(2)}
                 </span>
               </div>
               <div className="text-[10px] text-stone-400 font-bold mt-2">
-                Hoy: S/. {stats.todayRevenue.toFixed(2)} ({stats.todayOrdersCount} órdenes)
+                Hoy: S/. {Number(stats.todayRevenue || 0).toFixed(2)} ({stats.todayOrdersCount} órdenes)
               </div>
             </motion.div>
 

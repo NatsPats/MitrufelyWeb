@@ -11,13 +11,17 @@ const RegisterPage = lazy(() => import('@/features/auth/pages/RegisterPage'))
 const VerifyPage   = lazy(() => import('@/features/auth/pages/VerifyPage'))
 const AuthCallbackPage = lazy(() => import('@/features/auth/pages/AuthCallbackPage'))
 const HomePage     = lazy(() => import('@/pages/public/HomePage'))
-const DashboardPage = lazy(() => import('@/features/dashboard/pages/DashboardPage'))
+const AdminDashboardPage = lazy(() => import('@/features/dashboard/pages/AdminDashboardPage'))
+const AdminCustomerServiceLayout = lazy(() => import('@/features/dashboard/pages/AdminCustomerServiceLayout'))
+const AdminConfigPage = lazy(() => import('@/features/config/pages/AdminConfigPage'))
 const InventoryPage = lazy(() => import('@/features/inventory/pages/InventoryPage'))
 const CatalogAdminPage = lazy(() => import('@/features/products/pages/CatalogAdminPage'))
 const CatalogPage = lazy(() => import('@/features/catalog/pages/CatalogPage'))
 const OrdersPage = lazy(() => import('@/features/orders/pages/OrdersPage'))
 const OrderDetailPage = lazy(() => import('@/features/orders/pages/OrderDetailPage'))
 const ReportsPage = lazy(() => import('@/features/reports/pages/ReportsPage'))
+const AdminReviewsPage = lazy(() => import('@/features/reviews/pages/AdminReviewsPage'))
+const AdminIssuesPage = lazy(() => import('@/features/issues/pages/AdminIssuesPage'))
 const CriptoTrufasPage = lazy(() => import('@/features/sweetcoins/pages/SweetCoinsPage'))
 const NotFoundPage = lazy(() => import('@/pages/NotFoundPage'))
 const CartPage = lazy(() => import('@/features/cart/pages/CartPage'))
@@ -103,7 +107,12 @@ export function AppRouter() {
         {/* Rutas protegidas — requieren autenticación */}
         <Route element={<RequireAuth />}>
           <Route element={<AdminLayout />}>
-            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/dashboard" element={<AdminDashboardPage />} />
+            
+            {/* Solo ADMIN */}
+            <Route element={<RequirePermission permission="VIEW_REPORTS" />}>
+              <Route path="/dashboard/config" element={<AdminConfigPage />} />
+            </Route>
 
             {/* Solo ADMIN y MANAGER */}
             <Route element={<RequirePermission permission="VIEW_INVENTORY" />}>
@@ -120,6 +129,10 @@ export function AppRouter() {
             {/* Solo ADMIN y MANAGER */}
             <Route element={<RequirePermission permission="VIEW_REPORTS" />}>
               <Route path="/reports" element={<ReportsPage />} />
+              <Route path="/dashboard/atencion-cliente" element={<AdminCustomerServiceLayout />}>
+                <Route path="reviews" element={<AdminReviewsPage />} />
+                <Route path="incidencias" element={<AdminIssuesPage />} />
+              </Route>
             </Route>
 
             {/* ADMIN, MANAGER y CUSTOMER */}

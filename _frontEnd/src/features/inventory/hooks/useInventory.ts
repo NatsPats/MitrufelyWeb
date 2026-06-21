@@ -22,8 +22,7 @@ const formatErrorDetail = (error: any, defaultMsg: string): string => {
 export const useLotsQuery = (productoId: number | null, params: ListLotsParams = {}) => {
   return useQuery({
     queryKey: ['inventory-lots', productoId, params],
-    queryFn: () => inventoryApi.listLots(productoId!, params),
-    enabled: productoId !== null,
+    queryFn: () => inventoryApi.listLots(productoId, params),
     placeholderData: (prev) => prev,
   })
 }
@@ -39,8 +38,7 @@ export const useNextFefoLotQuery = (productoId: number | null) => {
 export const useKardexQuery = (productoId: number | null, params: ListKardexParams) => {
   return useQuery({
     queryKey: ['inventory-kardex', productoId, params],
-    queryFn: () => inventoryApi.getKardex(productoId!, params),
-    enabled: productoId !== null,
+    queryFn: () => inventoryApi.getKardex(productoId, params),
     placeholderData: (prev) => prev,
   })
 }

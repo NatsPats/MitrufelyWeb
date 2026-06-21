@@ -16,11 +16,13 @@ from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from sqlalchemy import (
+    Boolean,
     DateTime,
     ForeignKey,
     Integer,
     Numeric,
     String,
+    Text,
     func,
 )
 from sqlalchemy.dialects.postgresql import ENUM as PG_ENUM, JSONB
@@ -39,6 +41,13 @@ from app.infrastructure.database.models.enums import (
 if TYPE_CHECKING:
     from app.infrastructure.database.models.catalogo import Lote, MovimientoStock, Producto
     from app.infrastructure.database.models.cupones import CuponCliente
+    from app.infrastructure.database.models.pedidos_ext import (
+        Notification,
+        OrderEvent,
+        OrderIssue,
+        OrderRefund,
+        OrderReview,
+    )
     from app.infrastructure.database.models.recompensas import MovimientoPuntos
     from app.infrastructure.database.models.usuarios import Cliente, Usuario
 
@@ -108,6 +117,23 @@ class Venta(Base):
         DateTime, nullable=False, server_default=func.now()
     )
 
+    # ── M14: Campos de envío, ETA y reembolso ──────────────────────────────
+    shipping_cost_applied: Mapped[Decimal] = mapped_column(
+        Numeric(10, 2), nullable=False, default=Decimal("0")
+    )
+    free_shipping_applied: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False
+    )
+    total_final: Mapped[Decimal] = mapped_column(
+        Numeric(10, 2), nullable=False, default=Decimal("0")
+    )
+    delivery_eta: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    delivery_completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    refund_amount: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
+    refund_date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    cancelled_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    cancellation_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+
     # ── Relaciones ─────────────────────────────────────────────────────────
     cliente: Mapped["Cliente"] = relationship("Cliente", back_populates="ventas", lazy="select")
     cupon_cliente: Mapped["CuponCliente | None"] = relationship(
@@ -133,6 +159,23 @@ class Venta(Base):
     )
     movimientos_puntos: Mapped[list["MovimientoPuntos"]] = relationship(
         "MovimientoPuntos", back_populates="venta", lazy="select"
+    )
+
+    # ── M14: Relaciones con nuevas tablas ──────────────────────────────────
+    order_events: Mapped[list["OrderEvent"]] = relationship(
+        "OrderEvent", back_populates="venta", lazy="select", order_by="OrderEvent.created_at"
+    )
+    order_refund: Mapped["OrderRefund | None"] = relationship(
+        "OrderRefund", back_populates="venta", uselist=False, lazy="select"
+    )
+    order_review: Mapped["OrderReview | None"] = relationship(
+        "OrderReview", back_populates="venta", uselist=False, lazy="select"
+    )
+    order_issues: Mapped[list["OrderIssue"]] = relationship(
+        "OrderIssue", back_populates="venta", lazy="select"
+    )
+    notifications: Mapped[list["Notification"]] = relationship(
+        "Notification", back_populates="venta", lazy="select"
     )
 
 

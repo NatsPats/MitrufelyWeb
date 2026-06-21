@@ -31,6 +31,7 @@ Están diseñados para ser pasados a la IA como contexto de referencia antes de 
 | [`12_STORAGE_MEDIA.md`](./12_STORAGE_MEDIA.md)                 | Almacenamiento y Multimedia (Cloudinary)  | Subida y optimización de imágenes con Pillow e integridad |
 | [`13_PRODUCTS_CATALOG_CRUD.md`](./13_PRODUCTS_CATALOG_CRUD.md) | Catálogo de Productos                     | Patrones avanzados de CRUD, disponibilidad, auto-slug    |
 | [`14_REACT_QUERY_LOADERS.md`](./14_REACT_QUERY_LOADERS.md)     | Loaders y Transiciones de Estado          | Manejo de loaders, isPlaceholderData, transiciones UX    |
+| [`15_ORDERS_FSM_AND_DELIVERY.md`](./15_ORDERS_FSM_AND_DELIVERY.md)| Máquina de Estados y Delivery M14        | Flujo extendido FSM, tracking, microservicio de envío    |
 
 ---
 
@@ -43,6 +44,7 @@ Están diseñados para ser pasados a la IA como contexto de referencia antes de 
 - **Frontend:** React 19 + Vite + TypeScript strict + Tailwind CSS v4
 - **Auth:** JWT HS256 + RBAC (roles: ADMIN, CLIENTE)
 - **Queue:** Celery + Redis broker
+- **Microservicios:** `delivery-service` en puerto 8001
 - **API prefix:** `/api/v1`
 - **Response envelope:** `{ success, data, message }` / `{ success, error, request_id }`
 
@@ -72,11 +74,14 @@ app/modules/
 ├── categories/    # Categorías CRUD (slug, soft delete)       ← [Fase 2 — M13]
 ├── products/      # Catálogo, categorías, paquetes comerciales ← [Fase 2]
 ├── inventory/     # Lotes, Kardex, stock                      ← [Fase 3]
-├── orders/        # Ventas, checkout, detalles, estados        ← [Fase 4]
+├── orders/        # Ventas, checkout, detalles, estados, FSM   ← [Fase 4 & 5]
 ├── cart/          # Carrito persistente en Redis               ← [Fase 4]
+├── config/        # Configuración dinámica del negocio         ← [Fase 5]
+├── reviews/       # Calificaciones e incidencias               ← [Fase 5]
+├── notifications/ # Eventos y notificaciones en tiempo real    ← [Fase 5]
 ├── CriptoTrufas/  # Puntos, cupones, canjes                   ← [Fase 5 pendiente]
 ├── reports/       # PDF, Excel, documentos                    ← [Fase 6 pendiente]
-└── dashboard/     # Métricas, KPIs                            ← [Fase 6 pendiente]
+└── dashboard/     # Métricas, KPIs                            ← [Fase 5]
 ```
 
 ---
@@ -89,6 +94,7 @@ app/modules/
 | Fase 2 — Catálogo y Paquetes | [`_docs/fases/fase2_catalogo.md`](../fases/fase2_catalogo.md) | ✅ Implementado |
 | Fase 3 — Inventario FEFO | [`_docs/fases/fase3_inventario_fefo.md`](../fases/fase3_inventario_fefo.md) | ✅ Implementado |
 | Fase 4 — Carrito y Checkout | [`_docs/fases/fase4_checkout_ventas.md`](../fases/fase4_checkout_ventas.md) | ✅ Implementado |
+| Fase 5 — Pedidos FSM M14 | [`_docs/fases/fase5_pedidos_extendido.md`](../fases/fase5_pedidos_extendido.md) | ✅ Implementado |
 
 ---
 
@@ -97,7 +103,7 @@ app/modules/
 | Módulo | Skills a Leer |
 |--------|---------------|
 | `products/` (paquetes) | `04_CHECKOUT_FLOW.md` § Expansión + `08_API_CONTRACTS.md` § Packages + `12_STORAGE_MEDIA.md` |
-| `orders/` (checkout) | `04_CHECKOUT_FLOW.md` (completo) + `05_INVENTORY_STOCK.md` |
+| `orders/` (checkout & FSM) | `04_CHECKOUT_FLOW.md` + `05_INVENTORY_STOCK.md` + `15_ORDERS_FSM_AND_DELIVERY.md` |
 | `storage/` | `12_STORAGE_MEDIA.md` (subida, Pillow, rollback transaccional) |
 | `tests/` | `10_TESTING.md` (conftest real, NullPool, Redis mock) |
 | `frontend/` (loaders) | `07_FRONTEND_ARCHITECTURE.md` + `14_REACT_QUERY_LOADERS.md` |

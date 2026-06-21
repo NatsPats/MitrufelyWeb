@@ -16,7 +16,7 @@ import { AlertTriangle } from 'lucide-react'
 import { useAuthStore } from '@/app/store'
 
 import { PublicHeader }  from '@/shared/components/layout/PublicHeader'
-import { PublicNav }     from '@/shared/components/layout/PublicNav'
+
 import { PublicFooter }  from '@/shared/components/layout/PublicFooter'
 
 import { CatalogSidebar } from '../components/CatalogSidebar'
@@ -279,7 +279,7 @@ export default function CatalogPage() {
                 valor: isLoading ? (
                   <span className="inline-block h-8 w-20 bg-white/20 rounded animate-pulse my-0.5" />
                 ) : (
-                  `S/. ${minPrice.toFixed(2)}`
+                  `S/. ${Number(minPrice || 0).toFixed(2)}`
                 ),
                 label: 'Desde',
               },

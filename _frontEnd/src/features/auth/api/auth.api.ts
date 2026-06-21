@@ -33,6 +33,11 @@ export interface UserMeResponse {
     id_rol: number
     nombre: string
   }
+  cliente?: {
+    direccion: string | null
+    referencia: string | null
+    telefono: string | null
+  } | null
 }
 
 export const authApi = {

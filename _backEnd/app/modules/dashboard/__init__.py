@@ -1,1 +1,1 @@
-"""Dashboard module package."""
+"""Dashboard module."""

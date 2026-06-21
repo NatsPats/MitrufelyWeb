@@ -169,7 +169,7 @@ export default function ReportsPage() {
       sheet.addRow([])
       sheet.addRow(['Generado el:', new Date().toLocaleString('es-PE')])
       sheet.addRow(['Filtro aplicado:', invStockFilter.toUpperCase()])
-      sheet.addRow(['Valorización Total:', `S/. ${inventoryMetrics.totalValuation.toFixed(2)}`])
+      sheet.addRow(['Valorización Total:', `S/. ${Number(inventoryMetrics.totalValuation || 0).toFixed(2)}`])
       sheet.addRow([])
 
       // Table headers
@@ -423,7 +423,7 @@ export default function ReportsPage() {
                 </div>
                 <div className="bg-white p-5 rounded-2xl border border-stone-200 shadow-sm">
                   <p className="text-[10px] font-black uppercase text-stone-400">Valorización del Almacén</p>
-                  <p className="text-2xl font-black text-emerald-600 mt-1">S/. {inventoryMetrics.totalValuation.toFixed(2)}</p>
+                  <p className="text-2xl font-black text-emerald-600 mt-1">S/. {Number(inventoryMetrics.totalValuation || 0).toFixed(2)}</p>
                 </div>
               </div>
 
@@ -530,15 +530,15 @@ export default function ReportsPage() {
                 </div>
                 <div className="bg-white p-5 rounded-2xl border border-stone-200 shadow-sm">
                   <p className="text-[10px] font-black uppercase text-stone-400">Total Base Imponible</p>
-                  <p className="text-2xl font-black text-stone-700 mt-1">S/. {salesMetrics.baseImponibleTotal.toFixed(2)}</p>
+                  <p className="text-2xl font-black text-stone-700 mt-1">S/. {Number(salesMetrics.baseImponibleTotal || 0).toFixed(2)}</p>
                 </div>
                 <div className="bg-white p-5 rounded-2xl border border-stone-200 shadow-sm">
                   <p className="text-[10px] font-black uppercase text-stone-400">Total IGV (18%)</p>
-                  <p className="text-2xl font-black text-stone-700 mt-1">S/. {salesMetrics.igvTotal.toFixed(2)}</p>
+                  <p className="text-2xl font-black text-stone-700 mt-1">S/. {Number(salesMetrics.igvTotal || 0).toFixed(2)}</p>
                 </div>
                 <div className="bg-white p-5 rounded-2xl border border-stone-200 shadow-sm">
                   <p className="text-[10px] font-black uppercase text-stone-400">Ventas Cobradas (Suma Total)</p>
-                  <p className="text-2xl font-black text-emerald-600 mt-1">S/. {salesMetrics.totalRevenue.toFixed(2)}</p>
+                  <p className="text-2xl font-black text-emerald-600 mt-1">S/. {Number(salesMetrics.totalRevenue || 0).toFixed(2)}</p>
                 </div>
               </div>
 
@@ -639,8 +639,8 @@ export default function ReportsPage() {
                                   {s.estado_pago === 'PAGADO' ? 'Cobrado' : 'Pendiente'}
                                 </span>
                               </td>
-                              <td className="py-4 px-6 text-right text-stone-500 font-medium">S/. {base.toFixed(2)}</td>
-                              <td className="py-4 px-6 text-right text-stone-500 font-medium">S/. {igv.toFixed(2)}</td>
+                              <td className="py-4 px-6 text-right text-stone-500 font-medium">S/. {Number(base || 0).toFixed(2)}</td>
+                              <td className="py-4 px-6 text-right text-stone-500 font-medium">S/. {Number(igv || 0).toFixed(2)}</td>
                               <td className="py-4 px-6 text-right font-black text-stone-800">S/. {Number(s.total).toFixed(2)}</td>
                             </tr>
                           )
@@ -826,7 +826,7 @@ export default function ReportsPage() {
             </div>
             <div>
               <span className="font-bold block uppercase text-stone-500 text-[9px]">Valorización Total:</span>
-              <span className="text-lg font-black text-emerald-600">S/. {inventoryMetrics.totalValuation.toFixed(2)}</span>
+              <span className="text-lg font-black text-emerald-600">S/. {Number(inventoryMetrics.totalValuation || 0).toFixed(2)}</span>
             </div>
           </div>
         )}
@@ -839,15 +839,15 @@ export default function ReportsPage() {
             </div>
             <div>
               <span className="font-bold block uppercase text-stone-500 text-[9px]">Total Base Imponible:</span>
-              <span className="text-lg font-black text-stone-800">S/. {salesMetrics.baseImponibleTotal.toFixed(2)}</span>
+              <span className="text-lg font-black text-stone-800">S/. {Number(salesMetrics.baseImponibleTotal || 0).toFixed(2)}</span>
             </div>
             <div>
               <span className="font-bold block uppercase text-stone-500 text-[9px]">Total IGV Recaudado:</span>
-              <span className="text-lg font-black text-stone-800">S/. {salesMetrics.igvTotal.toFixed(2)}</span>
+              <span className="text-lg font-black text-stone-800">S/. {Number(salesMetrics.igvTotal || 0).toFixed(2)}</span>
             </div>
             <div>
               <span className="font-bold block uppercase text-stone-500 text-[9px]">Total Recaudación:</span>
-              <span className="text-lg font-black text-emerald-600">S/. {salesMetrics.totalRevenue.toFixed(2)}</span>
+              <span className="text-lg font-black text-emerald-600">S/. {Number(salesMetrics.totalRevenue || 0).toFixed(2)}</span>
             </div>
           </div>
         )}
@@ -944,8 +944,8 @@ export default function ReportsPage() {
                       <td className="py-2 px-3 border-r border-stone-200 font-bold">
                         {s.estado_pago === 'PAGADO' ? 'COBRADO' : 'PENDIENTE'}
                       </td>
-                      <td className="py-2 px-3 border-r border-stone-200 text-right">S/. {base.toFixed(2)}</td>
-                      <td className="py-2 px-3 border-r border-stone-200 text-right">S/. {igv.toFixed(2)}</td>
+                      <td className="py-2 px-3 border-r border-stone-200 text-right">S/. {Number(base || 0).toFixed(2)}</td>
+                      <td className="py-2 px-3 border-r border-stone-200 text-right">S/. {Number(igv || 0).toFixed(2)}</td>
                       <td className="py-2 px-3 text-right font-bold">S/. {Number(s.total).toFixed(2)}</td>
                     </tr>
                   )
@@ -953,9 +953,9 @@ export default function ReportsPage() {
                 {/* Total Summary Row */}
                 <tr className="bg-stone-50 font-bold border-t-2 border-stone-300">
                   <td colSpan={4} className="py-2 px-3 border-r border-stone-200 text-left font-black uppercase text-stone-700">Total General del Reporte</td>
-                  <td className="py-2 px-3 border-r border-stone-200 text-right">S/. {salesMetrics.baseImponibleTotal.toFixed(2)}</td>
-                  <td className="py-2 px-3 border-r border-stone-200 text-right">S/. {salesMetrics.igvTotal.toFixed(2)}</td>
-                  <td className="py-2 px-3 text-right text-emerald-700 font-black">S/. {salesMetrics.totalRevenue.toFixed(2)}</td>
+                  <td className="py-2 px-3 border-r border-stone-200 text-right">S/. {Number(salesMetrics.baseImponibleTotal || 0).toFixed(2)}</td>
+                  <td className="py-2 px-3 border-r border-stone-200 text-right">S/. {Number(salesMetrics.igvTotal || 0).toFixed(2)}</td>
+                  <td className="py-2 px-3 text-right text-emerald-700 font-black">S/. {Number(salesMetrics.totalRevenue || 0).toFixed(2)}</td>
                 </tr>
               </tbody>
             </table>

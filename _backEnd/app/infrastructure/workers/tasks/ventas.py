@@ -3,26 +3,39 @@ import asyncio
 import structlog
 from sqlalchemy import text
 
-from app.infrastructure.database.session import AsyncSessionFactory
 from app.infrastructure.workers.celery_app import celery_app
 
 logger = structlog.get_logger(__name__)
 
 
 async def _run_expire_pending_ventas() -> int:
-    async with AsyncSessionFactory() as session:
-        async with session.begin():
-            result = await session.execute(
-                text("""
-                    UPDATE ventas
-                    SET estado = 'ANULADO'
-                    WHERE estado = 'PENDIENTE'
-                      AND estado_pago = 'PENDIENTE'
-                      AND fecha_venta < NOW() - INTERVAL '15 minutes'
-                """)
-            )
-            anuladas: int = result.rowcount
-    return anuladas
+    from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
+    from sqlalchemy.pool import NullPool
+    from app.infrastructure.database.session import _async_url, _connect_args
+
+    engine = create_async_engine(
+        _async_url,
+        connect_args=_connect_args,
+        poolclass=NullPool,
+    )
+    local_session_factory = async_sessionmaker(engine, expire_on_commit=False)
+
+    try:
+        async with local_session_factory() as session:
+            async with session.begin():
+                result = await session.execute(
+                    text("""
+                        UPDATE ventas
+                        SET estado = 'ANULADO'
+                        WHERE estado = 'PENDIENTE'
+                          AND estado_pago = 'PENDIENTE'
+                          AND fecha_venta < NOW() - INTERVAL '15 minutes'
+                    """)
+                )
+                anuladas: int = result.rowcount
+        return anuladas
+    finally:
+        await engine.dispose()
 
 
 @celery_app.task(

@@ -29,7 +29,6 @@ import { toast } from 'sonner'
 
 // ── Layout ─────────────────────────────────────────────────────────────────────
 import { PublicHeader } from '@/shared/components/layout/PublicHeader'
-import { PublicNav    } from '@/shared/components/layout/PublicNav'
 import { PublicFooter } from '@/shared/components/layout/PublicFooter'
 
 // ── Stores ─────────────────────────────────────────────────────────────────────

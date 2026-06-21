@@ -25,7 +25,7 @@ class IInventoryRepository(AbstractRepository[Lote, int], ABC):
     @abstractmethod
     async def get_lotes_by_producto(
         self,
-        id_producto: int,
+        id_producto: int | None,
         *,
         solo_vigentes: bool = True,
     ) -> list[Lote]:
@@ -60,7 +60,7 @@ class IInventoryRepository(AbstractRepository[Lote, int], ABC):
     @abstractmethod
     async def get_kardex_by_producto(
         self,
-        id_producto: int,
+        id_producto: int | None,
         *,
         limit: int,
         offset: int,

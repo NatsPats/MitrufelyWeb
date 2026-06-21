@@ -23,7 +23,7 @@ import confetti from 'canvas-confetti'
 import { useNavigate } from 'react-router'
 import { useCartStore } from '@/stores/cart.store'
 import { useCheckoutCart } from '../hooks/useCart'
-import { useDatosFiscales, useUpsertDatosFiscales, useUpdateProfile } from '@/features/auth/hooks/useProfile'
+import { useDatosFiscales, useUpsertDatosFiscales, useUpdateProfile, useProfileData } from '@/features/auth/hooks/useProfile'
 import {
   fiscalSchema, type FiscalFormData,
   tarjetaSchema, type TarjetaFormData,
@@ -93,12 +93,14 @@ export function PaymentModal({ isOpen, onClose, subtotal, total }: PaymentModalP
   const [step, setStep] = useState<Step>(0)
   const [ventaId, setVentaId] = useState<number | null>(null)
   const [editFiscal, setEditFiscal] = useState(false)
+  const [editEnvio, setEditEnvio] = useState(false)
   const [showCardFront, setShowCardFront] = useState(true)
 
   const { discount, coupon, clearDiscount } = useCartStore()
   const checkout = useCheckoutCart()
   const { data: fiscalData, isLoading: fiscalLoading } = useDatosFiscales()
   const upsertFiscal = useUpsertDatosFiscales()
+  const { data: profileData } = useProfileData()
   const updateProfile = useUpdateProfile()
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
@@ -119,6 +121,7 @@ export function PaymentModal({ isOpen, onClose, subtotal, total }: PaymentModalP
   const [direccion, setDireccion] = useState('')
   const [referencia, setReferencia] = useState('')
   const [telefono, setTelefono] = useState('')
+  const [envioInitialized, setEnvioInitialized] = useState(false)
 
   // ── Reset al abrir ─────────────────────────────────────────────────────────
   useEffect(() => {
@@ -126,11 +129,13 @@ export function PaymentModal({ isOpen, onClose, subtotal, total }: PaymentModalP
       setStep(0)
       setVentaId(null)
       setEditFiscal(false)
+      setEditEnvio(false)
       fiscalForm.reset()
       tarjetaForm.reset()
       setDireccion('')
       setReferencia('')
       setTelefono('')
+      setEnvioInitialized(false)
     }
   }, [isOpen])
 
@@ -145,6 +150,16 @@ export function PaymentModal({ isOpen, onClose, subtotal, total }: PaymentModalP
       })
     }
   }, [fiscalData, step, editFiscal])
+
+  // ── Pre-llenar envio si ya existe ─────────────────────────────────────────
+  useEffect(() => {
+    if (profileData && step === 2 && !envioInitialized) {
+      setDireccion(profileData.cliente?.direccion || '')
+      setReferencia(profileData.cliente?.referencia || '')
+      setTelefono(profileData.telefono || '')
+      setEnvioInitialized(true)
+    }
+  }, [profileData, step, envioInitialized])
 
   // ── Escape / scroll lock ───────────────────────────────────────────────────
   useEffect(() => {
@@ -179,22 +194,38 @@ export function PaymentModal({ isOpen, onClose, subtotal, total }: PaymentModalP
 
   // ── Handlers ───────────────────────────────────────────────────────────────
   const handleFiscalSubmit = fiscalForm.handleSubmit(async (data) => {
-    await upsertFiscal.mutateAsync({
-      tipo_documento: data.tipo_documento,
-      numero_documento: data.numero_documento,
-      razon_social: data.razon_social || null,
-      direccion_fiscal: data.direccion_fiscal || null,
-    })
+    const isModified = !fiscalData ||
+      fiscalData.tipo_documento !== data.tipo_documento ||
+      fiscalData.numero_documento !== data.numero_documento ||
+      (fiscalData.razon_social || '') !== (data.razon_social || '') ||
+      (fiscalData.direccion_fiscal || '') !== (data.direccion_fiscal || '');
+
+    if (isModified) {
+      await upsertFiscal.mutateAsync({
+        tipo_documento: data.tipo_documento,
+        numero_documento: data.numero_documento,
+        razon_social: data.razon_social || null,
+        direccion_fiscal: data.direccion_fiscal || null,
+      })
+    }
     setEditFiscal(false)
     setStep(2)
   })
 
   const handleEnvioSubmit = async () => {
-    await updateProfile.mutateAsync({
-      telefono: telefono || null,
-      direccion: direccion || null,
-      referencia: referencia || null,
-    })
+    const isModified = !profileData ||
+      (profileData.cliente?.direccion || '') !== (direccion || '') ||
+      (profileData.cliente?.referencia || '') !== (referencia || '') ||
+      (profileData.telefono || '') !== (telefono || '');
+
+    if (isModified) {
+      await updateProfile.mutateAsync({
+        telefono: telefono || null,
+        direccion: direccion || null,
+        referencia: referencia || null,
+      })
+    }
+    setEditEnvio(false)
     setStep(3)
   }
 
@@ -284,17 +315,17 @@ export function PaymentModal({ isOpen, onClose, subtotal, total }: PaymentModalP
                 <div className="bg-[#faf8f5] rounded-2xl p-5 border border-[#5c0f1b]/8 space-y-2">
                   <div className="flex justify-between text-sm font-semibold text-[#2a1115]/70">
                     <span>Subtotal</span>
-                    <span>S/ {subtotal.toFixed(2)}</span>
+                    <span>S/ {Number(subtotal || 0).toFixed(2)}</span>
                   </div>
                   {discount > 0 && (
                     <div className="flex justify-between text-sm font-semibold text-emerald-600">
                       <span>Descuento {coupon && `(${coupon})`}</span>
-                      <span>− S/ {discount.toFixed(2)}</span>
+                      <span>− S/ {Number(discount || 0).toFixed(2)}</span>
                     </div>
                   )}
                   <div className="flex justify-between text-lg font-black text-[#5c0f1b] border-t border-[#5c0f1b]/10 pt-2 mt-2">
                     <span>Total</span>
-                    <span>S/ {total.toFixed(2)}</span>
+                    <span>S/ {Number(total || 0).toFixed(2)}</span>
                   </div>
                 </div>
 
@@ -396,17 +427,47 @@ export function PaymentModal({ isOpen, onClose, subtotal, total }: PaymentModalP
                   Datos de Envío
                 </div>
 
-                <div className="space-y-3">
-                  <Field label="Dirección" required>
-                    <Input id="envio-direccion" placeholder="Av. / Jr. / Calle" value={direccion} onChange={(e) => setDireccion(e.target.value)} />
-                  </Field>
-                  <Field label="Referencia" required>
-                    <Input id="envio-ref" placeholder="Ej. Al costado del parque" value={referencia} onChange={(e) => setReferencia(e.target.value)} />
-                  </Field>
-                  <Field label="Teléfono" required>
-                    <Input id="envio-tel" type="tel" placeholder="+51 999 999 999" value={telefono} onChange={(e) => setTelefono(e.target.value)} />
-                  </Field>
-                </div>
+                {profileData && (profileData.cliente?.direccion || profileData.telefono) && !editEnvio ? (
+                  <div className="bg-emerald-50 rounded-2xl p-5 border border-emerald-200 space-y-3">
+                    {profileData.cliente?.direccion && (
+                      <div className="flex justify-between">
+                        <span className="text-xs font-bold text-stone-500 uppercase">Dirección</span>
+                        <span className="text-sm font-black text-[#2a1115] text-right">{profileData.cliente.direccion}</span>
+                      </div>
+                    )}
+                    {profileData.cliente?.referencia && (
+                      <div className="flex justify-between">
+                        <span className="text-xs font-bold text-stone-500 uppercase">Referencia</span>
+                        <span className="text-sm font-black text-[#2a1115] text-right">{profileData.cliente.referencia}</span>
+                      </div>
+                    )}
+                    {profileData.telefono && (
+                      <div className="flex justify-between">
+                        <span className="text-xs font-bold text-stone-500 uppercase">Teléfono</span>
+                        <span className="text-sm font-black text-[#2a1115] text-right">{profileData.telefono}</span>
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setEditEnvio(true)}
+                      className="text-xs font-bold text-[#5c0f1b] underline hover:text-[#ff7a45] transition-colors cursor-pointer"
+                    >
+                      Editar datos de envío
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <Field label="Dirección" required>
+                      <Input id="envio-direccion" placeholder="Av. / Jr. / Calle" value={direccion} onChange={(e) => setDireccion(e.target.value)} />
+                    </Field>
+                    <Field label="Referencia" required>
+                      <Input id="envio-ref" placeholder="Ej. Al costado del parque" value={referencia} onChange={(e) => setReferencia(e.target.value)} />
+                    </Field>
+                    <Field label="Teléfono" required>
+                      <Input id="envio-tel" type="tel" placeholder="+51 999 999 999" value={telefono} onChange={(e) => setTelefono(e.target.value)} />
+                    </Field>
+                  </div>
+                )}
 
                 <div className="flex gap-3 pt-2">
                   <button type="button" onClick={() => setStep(1)} className="flex-1 py-3 rounded-full border-2 border-[#5c0f1b]/20 text-[#5c0f1b] font-black text-sm hover:border-[#5c0f1b]/40 transition-all cursor-pointer flex items-center justify-center gap-2">
@@ -500,7 +561,7 @@ export function PaymentModal({ isOpen, onClose, subtotal, total }: PaymentModalP
                 <div className="bg-[#faf8f5] rounded-2xl p-4 border border-[#5c0f1b]/8">
                   <div className="flex justify-between text-base font-black text-[#5c0f1b]">
                     <span>Total a pagar</span>
-                    <span>S/ {total.toFixed(2)}</span>
+                    <span>S/ {Number(total || 0).toFixed(2)}</span>
                   </div>
                 </div>
 
@@ -514,7 +575,7 @@ export function PaymentModal({ isOpen, onClose, subtotal, total }: PaymentModalP
                     className="flex-1 py-3 rounded-full bg-[#5c0f1b] text-white font-black text-sm hover:bg-[#7a1525] transition-all active:scale-95 shadow-lg cursor-pointer border-none flex items-center justify-center gap-2"
                   >
                     <CreditCard className="h-4 w-4" />
-                    {checkout.isPending ? '...' : `Pagar S/ ${total.toFixed(2)}`}
+                    {checkout.isPending ? '...' : `Pagar S/ ${Number(total || 0).toFixed(2)}`}
                   </button>
                 </div>
               </form>

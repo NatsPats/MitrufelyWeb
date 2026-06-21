@@ -35,7 +35,7 @@ import { toast } from 'sonner'
 
 // ── Layout compartido ──────────────────────────────────────────────────────────
 import { PublicHeader } from '@/shared/components/layout/PublicHeader'
-import { PublicNav }    from '@/shared/components/layout/PublicNav'
+
 import { PublicFooter } from '@/shared/components/layout/PublicFooter'
 
 // ── Store ──────────────────────────────────────────────────────────────────────
@@ -70,7 +70,7 @@ function StarRating({ rating }: { rating: number }) {
         />
       ))}
       <span className="ml-1.5 text-sm font-black text-[#5c0f1b]">
-        {rating.toFixed(1)}
+        {Number(rating || 0).toFixed(1)}
       </span>
     </div>
   )

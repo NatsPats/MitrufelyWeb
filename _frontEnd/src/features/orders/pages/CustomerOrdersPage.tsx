@@ -9,13 +9,13 @@ import { Link, useNavigate } from 'react-router'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
 import {
-  ShoppingBag, Clock,
+  ShoppingBag, Clock, Star,
   Loader2, ChevronRight, ArrowLeft, Package, XCircle,
 } from 'lucide-react'
 
 import { useAuthStore } from '@/app/store'
 import { PublicHeader } from '@/shared/components/layout/PublicHeader'
-import { PublicNav } from '@/shared/components/layout/PublicNav'
+
 import { PublicFooter } from '@/shared/components/layout/PublicFooter'
 import { useCartItemCount } from '@/features/cart/hooks/useCart'
 import { useOrdersQuery } from '@/features/orders/hooks/useOrders'
@@ -23,8 +23,13 @@ import { useOrdersQuery } from '@/features/orders/hooks/useOrders'
 const ESTADO_LABELS: Record<string, { label: string; color: string }> = {
   PENDIENTE: { label: 'Pendiente', color: 'bg-amber-100 text-amber-800 border-amber-200' },
   PAGADO: { label: 'Pagado', color: 'bg-blue-100 text-blue-800 border-blue-200' },
+  PREPARANDO: { label: 'En Preparación', color: 'bg-orange-100 text-orange-800 border-orange-200' },
+  EN_CAMINO: { label: 'En Camino', color: 'bg-indigo-100 text-indigo-800 border-indigo-200' },
   ENTREGADO: { label: 'Entregado', color: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
-  ANULADO: { label: 'Anulado', color: 'bg-red-100 text-red-800 border-red-200' },
+  CANCELADO: { label: 'Cancelado', color: 'bg-red-50 text-red-700 border-red-200' },
+  DEVUELTO: { label: 'Devuelto', color: 'bg-rose-100 text-rose-800 border-rose-200' },
+  REEMBOLSADO: { label: 'Reembolsado', color: 'bg-purple-100 text-purple-800 border-purple-200' },
+  ANULADO: { label: 'Anulado', color: 'bg-stone-100 text-stone-800 border-stone-200' },
 }
 
 const PAGO_LABELS: Record<string, { label: string; color: string }> = {
@@ -116,7 +121,11 @@ export default function CustomerOrdersPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.05 }}
                 onClick={() => navigate(`/mi-cuenta/pedidos/${order.id_venta}`)}
-                className="bg-white rounded-2xl border border-[#5c0f1b]/8 p-5 shadow-sm hover:shadow-md hover:border-[#5c0f1b]/20 transition-all cursor-pointer group"
+                className={`rounded-2xl border p-5 shadow-sm hover:shadow-md transition-all cursor-pointer group ${
+                  order.estado === 'ENTREGADO' && !order.has_review
+                    ? 'border-yellow-400 bg-yellow-50/50 hover:border-yellow-500'
+                    : 'bg-white border-[#5c0f1b]/8 hover:border-[#5c0f1b]/20'
+                }`}
               >
                 <div className="flex items-center justify-between gap-4">
                   <div className="flex items-center gap-4">
@@ -124,9 +133,17 @@ export default function CustomerOrdersPage() {
                       <ShoppingBag className="h-5 w-5 text-[#5c0f1b]" />
                     </div>
                     <div>
-                      <p className="font-black text-[#2a1115] text-lg" style={{ fontFamily: "'Outfit', sans-serif" }}>
-                        Pedido #{order.id_venta}
-                      </p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-black text-[#2a1115] text-lg" style={{ fontFamily: "'Outfit', sans-serif" }}>
+                          Pedido #{order.id_venta}
+                        </p>
+                        {order.estado === 'ENTREGADO' && !order.has_review && (
+                          <span className="flex items-center gap-1 bg-yellow-100 text-yellow-800 text-[10px] font-black px-2 py-0.5 rounded-full border border-yellow-200">
+                            <Star className="h-3 w-3 fill-yellow-500 text-yellow-500" />
+                            Calificar
+                          </span>
+                        )}
+                      </div>
                       <p className="text-xs font-semibold text-[#2a1115]/50 flex items-center gap-1.5 mt-0.5">
                         <Clock className="h-3 w-3" />
                         {order.fecha_venta ? formatDate(order.fecha_venta) : '—'}

@@ -47,12 +47,12 @@ services:
   redis:
     image: redis:7.2-alpine
     ports:
-      - "127.0.0.1:6379:6379"     # Solo localhost — evita exposición en redes compartidas
-    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+      - "127.0.0.1:6399:6399"     # Puerto 6399: evita conflicto con otros contenedores en 6379
+    command: redis-server --port 6399 --maxmemory 256mb --maxmemory-policy allkeys-lru
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-p", "6399", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5

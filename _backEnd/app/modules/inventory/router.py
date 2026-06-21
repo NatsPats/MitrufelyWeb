@@ -69,14 +69,14 @@ async def create_lot(
 
 
 @router.get(
-    "/lots/{id_producto}",
+    "/lots",
     response_model=list[LoteResponse],
-    summary="Listar lotes de un producto",
+    summary="Listar lotes de un producto o globales",
     dependencies=[_read_dep],
 )
 async def list_lots(
-    id_producto: int,
     service: InventoryServiceDep,
+    id_producto: int | None = Query(default=None, description="Filtro opcional por producto"),
     solo_vigentes: bool = Query(default=True, description="Si true, retorna solo lotes VIGENTE"),
 ) -> list[LoteResponse]:
     """Retorna los lotes de un producto en orden FEFO (fecha_vencimiento ASC NULLS LAST)."""
@@ -109,18 +109,18 @@ async def apply_adjustment(
 # ── Kardex ────────────────────────────────────────────────────────────────────
 
 @router.get(
-    "/kardex/{id_producto}",
+    "/kardex",
     response_model=PaginatedResponse[MovimientoStockResponse],
-    summary="Kardex de movimientos de un producto",
+    summary="Kardex de movimientos de un producto o global",
     dependencies=[_read_dep],
 )
 async def get_kardex(
-    id_producto: int,
     service: InventoryServiceDep,
+    id_producto: int | None = Query(default=None, description="Filtro opcional por producto"),
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
 ) -> PaginatedResponse[MovimientoStockResponse]:
-    """Retorna el historial paginado de movimientos (Kardex) de un producto."""
+    """Retorna el historial paginado de movimientos (Kardex) de un producto o global."""
     params = PaginationParams(page=page, page_size=page_size)
     return await service.get_kardex(id_producto, params)
 

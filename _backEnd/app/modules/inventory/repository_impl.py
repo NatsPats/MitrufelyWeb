@@ -80,19 +80,20 @@ class InventoryRepositoryImpl(IInventoryRepository):
 
     async def get_lotes_by_producto(
         self,
-        id_producto: int,
+        id_producto: int | None,
         *,
         solo_vigentes: bool = True,
     ) -> list[Lote]:
-        stmt = (
-            select(Lote)
-            .where(Lote.id_producto == id_producto)
-            .order_by(
-                # FEFO: primero los que vencen antes; lotes sin fecha al final
+        stmt = select(Lote)
+        if id_producto is not None:
+            stmt = stmt.where(Lote.id_producto == id_producto)
+            stmt = stmt.order_by(
                 Lote.fecha_vencimiento.asc().nullslast(),
                 Lote.id_lote.asc(),
             )
-        )
+        else:
+            stmt = stmt.order_by(Lote.id_lote.desc())
+            
         if solo_vigentes:
             stmt = stmt.where(Lote.estado_lote == EstadoLoteEnum.VIGENTE)
 
@@ -142,27 +143,24 @@ class InventoryRepositoryImpl(IInventoryRepository):
 
     async def get_kardex_by_producto(
         self,
-        id_producto: int,
+        id_producto: int | None,
         *,
         limit: int,
         offset: int,
     ) -> tuple[list[MovimientoStock], int]:
         # Count total
-        count_stmt = (
-            select(func.count())
-            .select_from(MovimientoStock)
-            .where(MovimientoStock.id_producto == id_producto)
-        )
+        count_stmt = select(func.count()).select_from(MovimientoStock)
+        if id_producto is not None:
+            count_stmt = count_stmt.where(MovimientoStock.id_producto == id_producto)
+            
         total: int = (await self._session.execute(count_stmt)).scalar_one()
 
         # Fetch page
-        stmt = (
-            select(MovimientoStock)
-            .where(MovimientoStock.id_producto == id_producto)
-            .order_by(MovimientoStock.fecha_movimiento.desc())
-            .limit(limit)
-            .offset(offset)
-        )
+        stmt = select(MovimientoStock)
+        if id_producto is not None:
+            stmt = stmt.where(MovimientoStock.id_producto == id_producto)
+            
+        stmt = stmt.order_by(MovimientoStock.fecha_movimiento.desc()).limit(limit).offset(offset)
         result = await self._session.execute(stmt)
         return list(result.scalars().all()), total
 

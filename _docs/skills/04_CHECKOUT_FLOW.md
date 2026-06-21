@@ -2,6 +2,7 @@
 
 > **CUÁNDO USAR:** Antes de implementar el módulo `orders`, el checkout, o cualquier proceso que involucre venta + lotes + puntos.
 > **Última actualización:** 2026-06-09 — Refleja implementación real post-Fase 4.
+> **NOTA FASE 5:** Este documento describe el flujo básico hasta la Fase 4. Para ver la evolución del ciclo de vida (FSM), la integración del microservicio de delivery y costos de envío dinámicos, **LEE OBLIGATORIAMENTE el [SKILL 15 — Máquina de Estados de Pedidos y Delivery](./15_ORDERS_FSM_AND_DELIVERY.md)**.
 
 ---
 

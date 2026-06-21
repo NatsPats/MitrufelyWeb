@@ -35,8 +35,9 @@ export const inventoryApi = {
   /**
    * Listar lotes de un producto en orden FEFO
    */
-  listLots: async (productoId: number, params: ListLotsParams = {}): Promise<Lote[]> => {
-    const { data } = await api.get<Lote[]>(`/inventory/lots/${productoId}`, { params })
+  listLots: async (productoId: number | null, params: ListLotsParams = {}): Promise<Lote[]> => {
+    const qParams = productoId ? { ...params, id_producto: productoId } : params
+    const { data } = await api.get<Lote[]>(`/inventory/lots`, { params: qParams })
     return data
   },
 
@@ -67,8 +68,9 @@ export const inventoryApi = {
   /**
    * Obtiene el historial cronológico (Kardex) de un producto físico
    */
-  getKardex: async (productoId: number, params: ListKardexParams = {}): Promise<PaginatedResponse<MovimientoStock>> => {
-    const { data } = await api.get<PaginatedResponse<MovimientoStock>>(`/inventory/kardex/${productoId}`, { params })
+  getKardex: async (productoId: number | null, params: ListKardexParams = {}): Promise<PaginatedResponse<MovimientoStock>> => {
+    const qParams = productoId ? { ...params, id_producto: productoId } : params
+    const { data } = await api.get<PaginatedResponse<MovimientoStock>>(`/inventory/kardex`, { params: qParams })
     return data
   },
 

@@ -16,7 +16,7 @@ import { useCartItemCount } from '@/features/cart/hooks/useCart'
 
 // Layout compartido
 import { PublicHeader }  from '@/shared/components/layout/PublicHeader'
-import { PublicNav }     from '@/shared/components/layout/PublicNav'
+
 import { PublicFooter }  from '@/shared/components/layout/PublicFooter'
 
 // Secciones de dominio

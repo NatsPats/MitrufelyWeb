@@ -22,6 +22,7 @@ class VentaRepositoryImpl(IVentaRepository):
                 selectinload(Venta.paquetes_vendidos),
                 selectinload(Venta.metodos_pago),
                 selectinload(Venta.documentos),
+                selectinload(Venta.order_review),
             )
             .where(Venta.id_venta == pk)
         )
@@ -29,7 +30,19 @@ class VentaRepositoryImpl(IVentaRepository):
         return result.scalars().first()
 
     async def get_all(self, *, limit: int = 100, offset: int = 0) -> List[Venta]:
-        stmt = select(Venta).limit(limit).offset(offset)
+        stmt = (
+            select(Venta)
+            .options(
+                selectinload(Venta.detalles).selectinload(DetalleVenta.producto),
+                selectinload(Venta.paquetes_vendidos),
+                selectinload(Venta.metodos_pago),
+                selectinload(Venta.documentos),
+                selectinload(Venta.order_review),
+            )
+            .order_by(Venta.fecha_venta.desc())
+            .limit(limit)
+            .offset(offset)
+        )
         result = await self._session.execute(stmt)
         return list(result.scalars().all())
 
@@ -61,6 +74,13 @@ class VentaRepositoryImpl(IVentaRepository):
     ) -> List[Venta]:
         stmt = (
             select(Venta)
+            .options(
+                selectinload(Venta.detalles).selectinload(DetalleVenta.producto),
+                selectinload(Venta.paquetes_vendidos),
+                selectinload(Venta.metodos_pago),
+                selectinload(Venta.documentos),
+                selectinload(Venta.order_review),
+            )
             .where(Venta.id_cliente == id_cliente)
             .order_by(Venta.fecha_venta.desc())
             .limit(limit)

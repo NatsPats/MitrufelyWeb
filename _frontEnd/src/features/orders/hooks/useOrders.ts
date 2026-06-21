@@ -45,31 +45,39 @@ export const useConfirmEntregaMutation = () => {
   return useMutation({
     mutationFn: (id: number) => ordersApi.confirmarEntrega(id),
     onSuccess: (data) => {
-      // Update list caches
-      queryClient.setQueriesData({ queryKey: ['orders'] }, (old: any) => {
-        if (!old) return old
-        if (Array.isArray(old)) {
-          return old.map((order: any) =>
-            order.id_venta === data.id_venta
-              ? { ...order, estado: data.estado, estado_pago: data.estado_pago }
-              : order
-          )
-        }
-        return old
-      })
-
-      // Update detail cache
-      queryClient.setQueryData(['orders', 'detail', data.id_venta], data)
-
       queryClient.invalidateQueries({ queryKey: ['orders'] })
       queryClient.invalidateQueries({ queryKey: ['orders', 'detail', data.id_venta] })
-      queryClient.invalidateQueries({ queryKey: ['admin-products'] })
-      queryClient.invalidateQueries({ queryKey: ['products'] })
-      queryClient.invalidateQueries({ queryKey: ['auth', 'me'] })
       toast.success(`Venta #${data.id_venta} marcada como ENTREGADA ✨`)
     },
     onError: (error: unknown) => {
       const detail = formatErrorDetail(error, 'Error al confirmar la entrega.')
+      toast.error(`Error: ${detail}`, { duration: 6000 })
+    },
+  })
+}
+
+export const useTransitionVentaMutation = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, action, payload }: { id: number, action: string, payload?: any }) => {
+      switch (action) {
+        case 'pagar': return ordersApi.pagar(id)
+        case 'preparar': return ordersApi.preparar(id)
+        case 'despachar': return ordersApi.despachar(id)
+        case 'entregar': return ordersApi.confirmarEntrega(id)
+        case 'cancelar': return ordersApi.cancelar(id, payload)
+        case 'devolver': return ordersApi.devolver(id, payload)
+        case 'reembolsar': return ordersApi.reembolsar(id, payload)
+        default: throw new Error('Acción no válida')
+      }
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] })
+      queryClient.invalidateQueries({ queryKey: ['orders', 'detail', data.id_venta] })
+      toast.success(`Transición aplicada exitosamente a la venta #${data.id_venta}`)
+    },
+    onError: (error: unknown) => {
+      const detail = formatErrorDetail(error, 'Error al procesar la transición.')
       toast.error(`Error: ${detail}`, { duration: 6000 })
     },
   })

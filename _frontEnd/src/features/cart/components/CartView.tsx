@@ -13,7 +13,7 @@ import { Link } from 'react-router'
 import { toast } from 'sonner'
 
 import { PublicHeader } from '@/shared/components/layout/PublicHeader'
-import { PublicNav }    from '@/shared/components/layout/PublicNav'
+
 import { PublicFooter } from '@/shared/components/layout/PublicFooter'
 
 import {
@@ -24,6 +24,7 @@ import {
 } from '../hooks/useCart'
 import { useCartStore } from '@/stores/cart.store'
 import { useAuthStore } from '@/app/store'
+import { useShippingCost } from '@/features/config/hooks/useConfig'
 
 import { PaymentModal } from './PaymentModal'
 
@@ -47,12 +48,18 @@ export default function CartView() {
     isLoading: cartLoading,
     isError: cartError,
   } = useCartQuery()
-  const updateItem = useUpdateCartItem()
-  const removeItem = useRemoveCartItem()
-
+  
   const items = cartData?.items ?? []
   const subtotal = Number(cartData?.subtotal ?? 0)
-  const total = Math.max(0, subtotal - discount)
+  
+  // M14: Obtener costo de envío dinámicamente
+  const { data: shippingData, isLoading: shippingLoading } = useShippingCost(subtotal, items.length > 0)
+  const costoEnvio = shippingData?.costo_envio ?? 0
+  const subtotalConDescuento = Math.max(0, subtotal - discount)
+  const total = subtotalConDescuento + costoEnvio
+  
+  const updateItem = useUpdateCartItem()
+  const removeItem = useRemoveCartItem()
   const itemCount = useCartItemCount()
 
   useEffect(() => {
@@ -255,7 +262,7 @@ export default function CartView() {
 
                       <div className="flex flex-col items-end gap-2">
                         <p className="font-black text-[#5c0f1b] text-base" style={{ fontFamily: "'Outfit', sans-serif" }}>
-                          S/ {lineTotal.toFixed(2)}
+                          S/ {Number(lineTotal || 0).toFixed(2)}
                         </p>
                         <button
                           onClick={() => removeItem.mutate(item.id_producto)}
@@ -281,7 +288,7 @@ export default function CartView() {
                   <div className="flex items-center gap-3 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3">
                     <Tag className="h-4 w-4 text-emerald-600 shrink-0" />
                     <span className="flex-1 text-sm font-black text-emerald-700">
-                      {coupon} — Descuento: S/ {discount.toFixed(2)}
+                      {coupon} — Descuento: S/ {Number(discount || 0).toFixed(2)}
                     </span>
                     <button
                       onClick={handleRemoveCoupon}
@@ -400,20 +407,46 @@ export default function CartView() {
                 <div className="px-6 py-5 border-[#5c0f1b]/8 space-y-3">
                   <div className="flex justify-between text-sm font-semibold text-[#2a1115]/70">
                     <span>Productos ({itemCount})</span>
-                    <span>S/ {subtotal.toFixed(2)}</span>
+                    <span>S/ {Number(subtotal || 0).toFixed(2)}</span>
                   </div>
+                  
+                  {/* Costo de Envío M14 */}
+                  <div className="flex justify-between text-sm font-semibold text-[#2a1115]/70">
+                    <span className="flex items-center gap-1">
+                      Envío 
+                      {shippingLoading && <Loader2 className="w-3 h-3 animate-spin" />}
+                      {shippingData?.aplica_envio_gratis && (
+                        <span className="ml-1 text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-sm">GRATIS</span>
+                      )}
+                    </span>
+                    <span>
+                      {shippingData?.aplica_envio_gratis ? (
+                        <span className="text-emerald-600">S/ 0.00</span>
+                      ) : (
+                        `S/ ${Number(costoEnvio || 0).toFixed(2)}`
+                      )}
+                    </span>
+                  </div>
+
                   <div className="flex justify-between text-sm font-bold text-[#ff7a45]">
                     <span>Descuentos</span>
-                    <span>{discount > 0 ? `S/ ${discount.toFixed(2)}` : 'S/ 0'}</span>
+                    <span>{discount > 0 ? `S/ ${Number(discount || 0).toFixed(2)}` : 'S/ 0.00'}</span>
                   </div>
                   <div className="flex justify-between text-lg font-black text-[#5c0f1b] pt-2 border-t border-[#5c0f1b]/10">
-                    <span style={{ fontFamily: "'Outfit', sans-serif" }}>Total</span>
-                    <span style={{ fontFamily: "'Outfit', sans-serif" }}>S/ {total.toFixed(2)}</span>
+                    <span style={{ fontFamily: "'Outfit', sans-serif" }}>Total a pagar</span>
+                    <span style={{ fontFamily: "'Outfit', sans-serif" }}>S/ {Number(total || 0).toFixed(2)}</span>
                   </div>
+
+                  {shippingData?.aplica_envio_gratis && (
+                    <div className="text-[10px] text-center font-bold text-emerald-600 bg-emerald-50 p-2 rounded-lg mt-2">
+                      ¡Felicidades! Tienes envío gratis en este pedido 🎉
+                    </div>
+                  )}
 
                   <button
                     onClick={handleContinue}
-                    className="w-full flex items-center justify-center gap-2 py-4 rounded-full bg-[#5c0f1b] text-white font-black text-sm hover:bg-[#7a1525] transition-all active:scale-95 shadow-lg cursor-pointer border-none mt-2"
+                    disabled={shippingLoading}
+                    className="w-full flex items-center justify-center gap-2 py-4 rounded-full bg-[#5c0f1b] text-white font-black text-sm hover:bg-[#7a1525] transition-all active:scale-95 shadow-lg cursor-pointer border-none mt-2 disabled:opacity-50"
                   >
                     Continuar compra
                     <ArrowRight className="h-4 w-4" />
@@ -436,3 +469,4 @@ export default function CartView() {
     </div>
   )
 }
+

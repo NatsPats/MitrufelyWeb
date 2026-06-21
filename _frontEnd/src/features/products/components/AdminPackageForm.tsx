@@ -355,7 +355,7 @@ export function AdminPackageForm({
               </div>
               <div className="text-right">
                 <span className="text-2xl font-black text-[#5c0f1b]" style={{ fontFamily: "'Outfit', sans-serif" }}>
-                  S/. {calculatedTotalPrice.toFixed(2)}
+                  S/. {Number(calculatedTotalPrice || 0).toFixed(2)}
                 </span>
               </div>
             </div>

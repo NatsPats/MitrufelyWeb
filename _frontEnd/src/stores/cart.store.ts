@@ -59,7 +59,7 @@ export const useCartStore = create<CartStore>()(
 
       return {
         success: true,
-        message: `Cupón "${normalized}" aplicado. Descuento: S/ ${discountAmount.toFixed(2)}`,
+        message: `Cupón "${normalized}" aplicado. Descuento: S/ ${Number(discountAmount || 0).toFixed(2)}`,
       }
     },
 
