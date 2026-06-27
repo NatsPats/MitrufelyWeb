@@ -93,7 +93,7 @@ export function CatalogSidebar({
           className="text-lg font-black text-[#2a1115]"
           style={{ fontFamily: "'Outfit', sans-serif" }}
         >
-          Filtrar
+          Filtyyyyyrar
         </h2>
         <button
           onClick={resetFilters}
