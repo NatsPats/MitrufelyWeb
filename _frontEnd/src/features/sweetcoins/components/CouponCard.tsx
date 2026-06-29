@@ -78,7 +78,7 @@ export function CouponCard({ coupon, index = 0 }: CouponCardProps) {
             className="text-white font-black"
             style={{ fontFamily: "'Outfit', sans-serif", fontSize: '2rem', lineHeight: 1 }}
           >
-            {coupon.cupon.porcentaje_descuento}%
+            {coupon.cupon_maestro.porcentaje_descuento}%
           </span>
           <span
             style={{
@@ -94,7 +94,7 @@ export function CouponCard({ coupon, index = 0 }: CouponCardProps) {
           </span>
         </div>
         <p className="text-white/80 text-xs font-semibold mt-1 line-clamp-1">
-          {coupon.cupon.nombre}
+          {coupon.cupon_maestro.nombre}
         </p>
       </div>
 

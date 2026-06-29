@@ -282,6 +282,42 @@ class VentaResponse(BaseModel):
 | Sin pasarelas de pago reales | No Culqi, Izipay, MercadoPago |
 | Sin procesamiento monetario externo | No webhooks de pago, no cobros con tarjeta |
 | Pago manual por ADMIN | `PUT /ventas/{id}/pagar` marca como PAGADA |
-| Sin PDF de comprobante | `url_archivo` en `None`. Pendiente Fase 6. |
+| Sin PDF de comprobante | `url_archivo` en `None`. Pendiente Fase 7. |
 | Sin numeración de documentos | `numero_serie`/`numero_correlativo` en `None` |
-| Sin aplicación de descuento por cupón | `monto_descuento_cupon` queda en 0 |
+
+> **Nota Fase 6:** El descuento por cupón **sí está implementado**. Ver sección 11.
+
+---
+
+## 11. Descuento por Cupón de Fidelización (Fase 6)
+
+Durante el checkout, si `VentaRequest.id_cupon_cliente` viene informado, `VentaService.create_checkout` aplica el descuento sobre la base imponible elegible según la restricción de categoría del cupón maestro:
+
+- Se recopilan los subtotales junto con el `id_categoria` de cada **producto individual** y de cada **componente de paquete** (los paquetes se expanden a sus productos).
+- Si `cupones_maestro.id_categoria IS NULL` → el `%` aplica sobre el subtotal completo.
+- Si `cupones_maestro.id_categoria = X` → el `%` aplica solo sobre los subtotales de los items cuya categoría coincida.
+
+```python
+# Pseudoclip del cálculo
+productos_comprados = []  # (subtotal_linea, id_categoria)
+for item in dto.productos or []:
+    productos_comprados.append((producto.precio * item.cantidad, producto.id_categoria))
+for item in dto.paquetes or []:
+    for comp in paquete.componentes:
+        productos_comprados.append((comp.precio * comp.cantidad * item.cantidad_paquete, comp.id_categoria))
+
+if cupon_maestro.id_categoria is None:
+    base_descuento = sum(s for s, _ in productos_comprados)
+else:
+    base_descuento = sum(s for s, cid in productos_comprados if cid == cupon_maestro.id_categoria)
+
+monto_descuento = (base_descuento * cupon_maestro.porcentaje_descuento / 100).quantize(Decimal("0.01"))
+```
+
+El descuento se aplica **antes** de calcular IGV y envío. El carrito en Redis persiste `id_categoria` y la composición de paquetes; `GET /api/v1/cart` repara en caliente los items antiguos sin esos campos.
+
+---
+
+## 12. Unicidad de Datos Fiscales (Fase 6)
+
+`upsert_datos_fiscales` valida proactivamente que el `numero_documento` no esté registrado por otro usuario antes de intentar el `INSERT`/`UPDATE`, devolviendo `BusinessRuleError` (HTTP 422) en lugar de permitir el `UniqueViolationError` de Postgres. Esto evita errores 500 y problemas de CORS derivados.

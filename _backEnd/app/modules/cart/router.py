@@ -12,6 +12,7 @@ from app.modules.cart.schemas import (
     AddCartItemRequest,
     CartResponse,
     UpdateCartItemRequest,
+    PackageComponentResponse,
 )
 from app.modules.cart.service import CartService
 from app.security.dependencies import AuthUser
@@ -31,8 +32,50 @@ logger = structlog.get_logger(__name__)
 async def get_cart(
     current_user: AuthUser,
     service: CartServiceDep,
+    session: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> CartResponse:
-    return await service.get_cart(user_id=current_user.user_id)
+    cart = await service.get_cart(user_id=current_user.user_id)
+    modified = False
+
+    for item in cart.items:
+        if not item.es_paquete and item.id_categoria is None:
+            # Obtener categoría de la base de datos para productos individuales
+            stmt = select(Producto.id_categoria).where(Producto.id_producto == item.id_producto)
+            res = await session.execute(stmt)
+            cat_id = res.scalar_one_or_none()
+            if cat_id is not None:
+                item.id_categoria = cat_id
+                modified = True
+
+        elif item.es_paquete and (not item.productos or len(item.productos) == 0):
+            # Obtener componentes del paquete de la base de datos
+            from app.infrastructure.database.models.catalogo import Paquete, PaqueteProducto
+            from sqlalchemy.orm import selectinload
+            stmt = (
+                select(Paquete)
+                .options(selectinload(Paquete.productos).selectinload(PaqueteProducto.producto))
+                .where(Paquete.id_paquete == item.id_paquete)
+            )
+            res = await session.execute(stmt)
+            paquete = res.scalar_one_or_none()
+            if paquete:
+                item.productos = [
+                    PackageComponentResponse(
+                        id_producto=pp.producto.id_producto,
+                        nombre=pp.producto.nombre,
+                        cantidad=pp.cantidad,
+                        precio_unitario=pp.producto.precio,
+                        id_categoria=pp.producto.id_categoria,
+                    )
+                    for pp in paquete.productos if pp.producto.estado
+                ]
+                modified = True
+
+    if modified:
+        # Actualizar la caché de Redis
+        await service._persist(user_id=current_user.user_id, cart=cart)
+
+    return cart
 
 
 @router.post(
@@ -69,12 +112,23 @@ async def add_item(
         precio_estimado = sum(
             pp.producto.precio * pp.cantidad for pp in paquete.productos if pp.producto.estado
         )
+        componentes = [
+            PackageComponentResponse(
+                id_producto=pp.producto.id_producto,
+                nombre=pp.producto.nombre,
+                cantidad=pp.cantidad,
+                precio_unitario=pp.producto.precio,
+                id_categoria=pp.producto.id_categoria,
+            )
+            for pp in paquete.productos if pp.producto.estado
+        ]
         return await service.add_item(
             user_id=current_user.user_id,
             nombre=paquete.nombre,
             precio_unitario=precio_estimado,
             item=payload,
             imagen_url=paquete.imagen_url,
+            productos=componentes,
         )
 
     stmt = select(Producto).where(
@@ -95,6 +149,7 @@ async def add_item(
         precio_unitario=producto.precio,
         item=payload,
         imagen_url=producto.imagen_url,
+        id_categoria=producto.id_categoria,
     )
 
 

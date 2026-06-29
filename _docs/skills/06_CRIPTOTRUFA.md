@@ -1,6 +1,8 @@
-# SKILL 06 — CriptoTrufa (Sistema de Fidelización)
+# SKILL 06 — CriptoTrufa (Sistema de Fidelización) — ACTUALIZADO FASE 6
 
-> **CUÁNDO USAR:** Antes de implementar el módulo `criptotrufa`, cupones, consulta de puntos, o canjes.
+> **CUÁNDO USAR:** Antes de implementar el módulo `sweetcoins`, cupones, consulta de puntos, canjes, ruleta o panel admin de fidelización.
+> **Última actualización:** 2026-06-29 — Refleja implementación real post-Fase 6.
+> **Módulo backend:** `app/modules/sweetcoins/` · **Prefix API:** `/api/v1/cripto-trufa`
 
 ---
 
@@ -30,11 +32,7 @@
 
 **El backend NO inserta en `movimientos_puntos` directamente para acumulación.**
 
-La acumulación ocurre por el trigger `tg_ventas_otorgar_puntos` al ejecutar:
-
-```python
-await order_repo.update(venta_id, {"estado_pago": "PAGADO"})
-```
+La acumulación ocurre por el trigger `tg_ventas_otorgar_puntos` definido como `AFTER INSERT OR UPDATE ON ventas` (se dispara tanto si la venta se inserta directamente como `PAGADO` —tarjeta online— como si se actualiza luego —pago manual admin—). El trigger distingue `TG_OP` antes de leer `OLD` y solo inserta el movimiento si `v_puntos > 0` (la restricción `movimientos_puntos_cantidad_check` exige `cantidad > 0`).
 
 **Fórmula del trigger:**
 
@@ -45,9 +43,9 @@ puntos = FLOOR(venta.total * config.tasa_conversion)
 
 El trigger también:
 
-1. Inserta en `movimientos_puntos` con tipo `ACUMULACION_VENTA`
-2. Actualiza `ventas.puntos_ganados`
-3. Marca `cupones_cliente.estado = 'USADO'` si la venta usó cupón
+1. Inserta en `movimientos_puntos` con tipo `ACUMULACION_VENTA` (con guarda anti-duplicación por `id_venta`).
+2. Actualiza `ventas.puntos_ganados`.
+3. Marca `cupones_cliente.estado = 'USADO'` si la venta usó cupón.
 
 ---
 
@@ -78,59 +76,37 @@ saldo = result.scalar()
 ## 5. Canje de Cupón (Backend sí ejecuta esto)
 
 ```http
-POST /api/v1/cripto-trufa/redeem
-{ id_cupon: <id_cupon_maestro> }
+POST /api/v1/cripto-trufa/coupons/redeem
+Idempotency-Key: <uuid-opcional>
+{ "id_cupon": <id_cupon_maestro> }
 ```
 
-### Flujo del Service
+### Idempotencia (Redis)
+
+Si llega `Idempotency-Key`, el router hace `SET idempotency:redeem:{user}:{key} = "processing" EX 120 NX`:
+- Si ya existe y está `processing` → HTTP 409.
+- Si ya existe con payload → se devuelve la respuesta cacheada.
+- Tras éxito, se guarda el resultado serializado; ante cualquier error se elimina la clave para permitir reintento.
+
+### Flujo del Service (`SweetCoinsService.canjear_cupon`)
 
 ```python
-async def canjear_cupon(self, cliente_id: int, id_cupon: int) -> CuponClienteResponse:
-    # 1. Obtener configuración activa
+async def canjear_cupon(self, id_usuario: int, id_cupon: int, idempotency_key: str | None = None) -> CuponCliente:
+    id_cliente = await self._resolve_cliente_id(id_usuario)  # crea el perfil si no existe
     config = await self._config_repo.get_active()
-    # (llama internamente: SELECT fn_config_recompensas_activa())
+    cupon_maestro = await self._cupon_maestro_repo.get_by_id(id_cupon)
+    # validaciones: existe, activo, costo_puntos > 0
 
-    # 2. Obtener cupón maestro
-    cupon = await self._cupon_maestro_repo.get_by_id(id_cupon)
-    if not cupon or not cupon.estado:
-        raise NotFoundError("Cupón no disponible")
-    if not cupon.costo_puntos:
-        raise BusinessRuleError("Este cupón no es canjeable con puntos")
-
-    # 3. Verificar saldo
-    saldo = await self.get_saldo(cliente_id)
-    if saldo < cupon.costo_puntos:
-        raise InsufficientCriptoTrufaError(
-            f"Saldo insuficiente: {saldo} / {cupon.costo_puntos} requeridos"
-        )
-
-    # 4. Generar código único para el cupón del cliente
-    codigo = _generate_coupon_code()  # e.g., uuid4()[:8].upper()
-
-    async with self._session.begin():
-        # 5. Debitar puntos (el trigger tg_movimientos_puntos_validar valida saldo negativo)
-        await self._puntos_repo.create({
-            "id_cliente": cliente_id,
-            "id_cupon_cliente": None,   # se actualizará después
-            "id_config": config.id_config,
-            "tipo_movimiento": "COMPRA_CUPON",
-            "cantidad": -cupon.costo_puntos,
-            # saldo_puntos_resultante lo calcula el trigger
-        })
-
-        # 6. Crear cupón del cliente
-        fecha_expiracion = datetime.now(UTC) + timedelta(days=cupon.dias_vigencia)
-        cupon_cliente = await self._cupon_cliente_repo.create({
-            "id_cliente": cliente_id,
-            "id_cupon": id_cupon,
-            "codigo_unico": codigo,
-            "estado": "DISPONIBLE",
-            "origen": "COMPRA_PUNTOS",
-            "fecha_expiracion": fecha_expiracion,
-        })
-
-    return CuponClienteResponse.model_validate(cupon_cliente)
+    async with self._session.begin_nested():   # ⚠️ savepoint, NO session.begin()
+        saldo_actual = await self._puntos_repo.get_saldo_for_update(id_cliente)  # SELECT ... FOR UPDATE
+        if saldo_actual < cupon_maestro.costo_puntos:
+            raise InsufficientSweetCoinsError(...)
+        # 1. Movimiento COMPRA_CUPON (cantidad negativa, saldo_puntos_resultante calculado)
+        # 2. CuponCliente(codigo_unico=generate_coupon_code("MTR"), estado=DISPONIBLE, origen=COMPRA_PUNTOS)
+    return cupon_cliente
 ```
+
+> **⚠️ Transacciones:** usar siempre `begin_nested()` (savepoint). SQLAlchemy 2.0 abre una transacción implícita al ejecutar la primera consulta de validación; un `session.begin()` explícito lanzaría `InvalidRequestError`. FastAPI confirma la transacción externa al cerrar `get_db_session`.
 
 ---
 
@@ -138,12 +114,12 @@ async def canjear_cupon(self, cliente_id: int, id_cupon: int) -> CuponClienteRes
 
 | Tipo                | Efecto      | Generado por                                  |
 | ------------------- | ----------- | --------------------------------------------- |
-| `ACUMULACION_VENTA` | `+puntos`   | `tg_ventas_otorgar_puntos` (auto)             |
+| `ACUMULACION_VENTA` | `+puntos`   | `tg_ventas_otorgar_puntos` (auto, INSERT/UPDATE) |
 | `COMPRA_CUPON`      | `-puntos`   | Service `canjear_cupon`                       |
-| `AJUSTE_ADMIN`      | `+/-puntos` | Service admin (reversa de anulación o ajuste) |
+| `AJUSTE_ADMIN`      | `+/-puntos` | Service admin `adjust_points`                 |
 | `EXPIRACION`        | `-puntos`   | Celery `sp_expirar_cupones_vencidos`          |
-| `PAGO_JUEGO`        | `-puntos`   | Módulo de juegos (futuro)                     |
-| `PREMIO_JUEGO`      | `+puntos`   | Módulo de juegos (futuro)                     |
+| `PAGO_JUEGO`        | `-puntos`   | Service `jugar_ruleta` (costo 50 pts)         |
+| `PREMIO_JUEGO`      | `+puntos`   | Service `jugar_ruleta` (premio 100 pts)       |
 
 ---
 
@@ -223,13 +199,118 @@ class MovimientoPuntosResponse(BaseModel):
 
 ## 10. Endpoints del Módulo CriptoTrufa
 
-| Método | Ruta                              | Rol     | Descripción                              |
-| ------ | --------------------------------- | ------- | ---------------------------------------- |
-| `GET`  | `/cripto-trufa/balance`           | CLIENTE | Saldo actual del cliente                 |
-| `GET`  | `/cripto-trufa/history`           | CLIENTE | Historial de movimientos                 |
-| `GET`  | `/cripto-trufa/coupons/available` | CLIENTE | Cupones maestro disponibles para canjear |
-| `POST` | `/cripto-trufa/coupons/redeem`    | CLIENTE | Canjear cupón con puntos                 |
-| `GET`  | `/cripto-trufa/coupons/mine`      | CLIENTE | Cupones propios del cliente              |
-| `POST` | `/cripto-trufa/adjust`            | ADMIN   | Ajuste manual de puntos                  |
-| `GET`  | `/cripto-trufa/config`            | ADMIN   | Ver configuración activa                 |
-| `PUT`  | `/cripto-trufa/config`            | ADMIN   | Actualizar configuración                 |
+Prefix `/api/v1/cripto-trufa`.
+
+| Método | Ruta                            | Rol     | Descripción                                |
+| ------ | ------------------------------- | ------- | ------------------------------------------ |
+| `GET`  | `/dashboard`                    | CLIENTE | Saldo + cupones activos + últimos 5 movs.  |
+| `GET`  | `/balance`                      | CLIENTE | Saldo actual del cliente                   |
+| `GET`  | `/history`                      | CLIENTE | Historial de movimientos                   |
+| `GET`  | `/coupons/available`            | CLIENTE | Cupones maestro canjeables (cacheado Redis 5 min) |
+| `POST` | `/coupons/redeem`               | CLIENTE | Canjear cupón (soporta `Idempotency-Key`)  |
+| `GET`  | `/coupons/mine`                 | CLIENTE | Cupones propios del cliente                |
+| `GET`  | `/public-config`                | CLIENTE | Configuración activa (solo lectura)        |
+| `POST` | `/play-ruleta`                  | CLIENTE | Ruleta Dulce (costo 50 pts)                |
+| `POST` | `/adjust`                       | ADMIN   | Ajuste manual de puntos (auditado)         |
+| `GET`  | `/config`                       | ADMIN   | Ver configuración activa                   |
+| `PUT`  | `/config`                       | ADMIN   | Actualizar configuración global            |
+| `GET`  | `/admin/clientes`               | ADMIN   | Lista de clientes con saldo                |
+| `GET`  | `/admin/history/{id_cliente}`   | ADMIN   | Historial de un cliente específico         |
+| `GET`  | `/admin/coupons`                | ADMIN   | Listar todos los cupones maestros          |
+| `POST` | `/admin/coupons`                | ADMIN   | Crear cupón maestro                        |
+| `PUT`  | `/admin/coupons/{id_cupon}`     | ADMIN   | Actualizar cupón maestro                   |
+| `DELETE` | `/admin/coupons/{id_cupon}`   | ADMIN   | Desactivar cupón maestro (borrado lógico)  |
+
+Los endpoints ADMIN que mutan el catálogo invalidan la caché `sweetcoins:coupons:available`.
+
+---
+
+## 11. Dashboard Consolidado (cliente)
+
+`GET /cripto-trufa/dashboard` devuelve en una sola llamada:
+
+```json
+{
+  "balance": 1650,
+  "cupones_activos": [ CuponClienteResponse, ... ],   // estado DISPONIBLE, no expirados
+  "historial_reciente": [ MovimientoPuntosResponse, ... ]  // últimos 5
+}
+```
+
+Reduce latencia en el frontend (`PointsView.tsx`, `PublicHeader.tsx`) frente a tres llamadas separadas.
+
+---
+
+## 12. Ruleta Dulce (`jugar_ruleta`)
+
+`POST /cripto-trufa/play-ruleta`. Operación atómica con `begin_nested()` + `SELECT FOR UPDATE`.
+
+| Probabilidad | `resultado`       | Efecto                                                   |
+| ------------ | ----------------- | -------------------------------------------------------- |
+| 50%          | `mala_suerte`     | Solo débito de 50 pts (`PAGO_JUEGO`).                    |
+| 30%          | `puntos_extra`    | +100 pts (`PREMIO_JUEGO`).                               |
+| 20%          | `cupon_sorpresa`  | `CuponCliente` con `origen=PREMIO_JUEGO` al azar (código prefijo `WIN`). Si no hay catálogo, cae a 100 pts de consolación. |
+
+El frontend mantiene animación mínima de 2s (`Promise.all`) para preservar la experiencia.
+
+---
+
+## 13. Restricción de Cupón por Categoría
+
+`cupones_maestro.id_categoria` (nullable):
+
+- `NULL` → el `%` aplica sobre el subtotal completo del carrito.
+- `X` → el `%` aplica **solo** sobre la suma de subtotales de:
+  - productos individuales con `id_categoria = X`;
+  - componentes de paquetes con `id_categoria = X` (los paquetes se expanden a sus productos).
+
+Implementado de forma idéntica en backend (`orders/service.py` → `create_checkout`) y frontend (`cart.store.ts`). El carrito en Redis persiste `id_categoria` y la composición de paquetes; `GET /api/v1/cart` repara en caliente los items antiguos sin esos campos.
+
+---
+
+## 14. Panel de Administración
+
+Página `/dashboard/criptotrufas` (`AdminSweetCoinsPage.tsx`) con tres pestañas:
+
+1. **Clientes** — buscador, saldos vía `vw_saldo_puntos_cliente`, modal de historial y ajuste auditado (justificación obligatoria).
+2. **Catálogo de Cupones** — CRUD de `cupones_maestro` con selector de categoría, borrado lógico y badges.
+3. **Configuración Global** — edición de `configuracion_recompensas` (tasa, límite, días, estado).
+
+---
+
+## 15. Frontend — Stores y Componentes
+
+| Archivo | Rol |
+| ------- | --- |
+| `stores/criptotrufa.store.ts` | Estado Zustand: hydrate, canje, ruleta, ajustes. Actualización optimista + rollback. |
+| `stores/cart.store.ts` | Aplica cupones con cálculo por categoría (productos + componentes de paquetes). |
+| `features/cart/components/CartView.tsx` | Selector "Mis Cupones", descuento dinámico, alerta de incompatibilidad, modal de advertencia. |
+| `features/cart/components/PaymentModal.tsx` | Resumen de pago enlazado al store del carrito. |
+| `features/sweetcoins/pages/PointsView.tsx` | Vista `/puntos`. |
+| `features/sweetcoins/components/ArcadeSection.tsx` | Ruleta Dulce. |
+| `features/sweetcoins/pages/AdminSweetCoinsPage.tsx` | Panel admin. |
+| `shared/components/layout/PublicHeader.tsx` | Badge de saldo sincronizado. |
+
+---
+
+## 16. Excepciones de Dominio
+
+Definidas en `app/core/exceptions.py`:
+
+| Excepción | HTTP | Cuándo |
+| --------- | ---- | ------ |
+| `InsufficientSweetCoinsError` | 422 | Saldo de CriptoTrufas insuficiente para canje/ruleta. |
+| `CouponDisabledError` | 422 | Cupón maestro inactivo o no existe. |
+| `BusinessRuleError` | 422 | Regla de negocio (ajuste 0, saldo negativo, nombre duplicado). |
+| `NotFoundError` | 404 | Cliente o cupón no encontrado. |
+
+---
+
+## 17. Validaciones Clave
+
+- Saldo nunca negativo (trigger + service revalidan).
+- No canjér de cupón inactivo o sin `costo_puntos`.
+- Ajuste admin: `cantidad != 0`, cliente existente, saldo resultante ≥ 0, justificación obligatoria (5–255 chars).
+- Nombre de cupón maestro único.
+- `porcentaje_descuento ∈ (0, 100]`; `tasa_conversion ∈ [0, 1]`.
+- `numero_documento` fiscal único por usuario (validación proactiva anti-`UniqueViolationError`).

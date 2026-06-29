@@ -10,6 +10,7 @@ from app.modules.cart.schemas import (
     CartItemResponse,
     CartResponse,
     UpdateCartItemRequest,
+    PackageComponentResponse,
 )
 
 logger = structlog.get_logger(__name__)
@@ -41,6 +42,17 @@ class CartService:
                     imagen_url=item.get("imagen_url"),
                     es_paquete=item.get("es_paquete", False),
                     id_paquete=item.get("id_paquete"),
+                    id_categoria=item.get("id_categoria"),
+                    productos=[
+                        PackageComponentResponse(
+                            id_producto=p["id_producto"],
+                            nombre=p["nombre"],
+                            cantidad=p["cantidad"],
+                            precio_unitario=Decimal(str(p["precio_unitario"])),
+                            id_categoria=p["id_categoria"],
+                        )
+                        for p in item.get("productos")
+                    ] if item.get("productos") else None
                 )
                 for item in data.get("items", [])
             ]
@@ -65,6 +77,8 @@ class CartService:
         precio_unitario: Decimal,
         item: AddCartItemRequest,
         imagen_url: str | None = None,
+        id_categoria: int | None = None,
+        productos: list | None = None,
     ) -> CartResponse:
         cart = await self.get_cart(user_id)
 
@@ -81,6 +95,8 @@ class CartService:
                     imagen_url=imagen_url,
                     es_paquete=item.es_paquete,
                     id_paquete=item.id_paquete,
+                    id_categoria=id_categoria,
+                    productos=productos,
                 )
             )
 
@@ -134,6 +150,17 @@ class CartService:
                     "imagen_url": i.imagen_url,
                     "es_paquete": i.es_paquete,
                     "id_paquete": i.id_paquete,
+                    "id_categoria": i.id_categoria,
+                    "productos": [
+                        {
+                            "id_producto": p.id_producto,
+                            "nombre": p.nombre,
+                            "cantidad": p.cantidad,
+                            "precio_unitario": str(p.precio_unitario),
+                            "id_categoria": p.id_categoria,
+                        }
+                        for p in (i.productos or [])
+                    ] if i.productos else None
                 }
                 for i in cart.items
             ],

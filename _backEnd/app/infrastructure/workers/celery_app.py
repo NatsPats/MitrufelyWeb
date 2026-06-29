@@ -22,6 +22,7 @@ celery_app = Celery(
         "app.infrastructure.workers.tasks.analytics",
         "app.infrastructure.workers.tasks.inventory",
         "app.infrastructure.workers.tasks.ventas",
+        "app.infrastructure.workers.tasks.sweetcoins",
     ],
 )
 
@@ -47,6 +48,10 @@ celery_app.conf.update(
         "expire-pending-ventas": {
             "task": "app.infrastructure.workers.tasks.ventas.expire_pending",
             "schedule": 300.0,  # Cada 5 minutos
+        },
+        "expire-coupons-daily": {
+            "task": "app.infrastructure.workers.tasks.sweetcoins.expire_coupons",
+            "schedule": 86400.0,  # Cada 24h
         },
     },
 )

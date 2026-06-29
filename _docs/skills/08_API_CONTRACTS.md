@@ -168,17 +168,26 @@ class PaginatedResponse(BaseModel, Generic[T]):
 | `POST` | `/{id}/cancel` | ADMIN | Anular venta |
 | `GET` | `/{id}/document` | Autenticado | Descargar PDF |
 
-### CriptoTrufas (`/api/v1/criptotrufas`)
+### CriptoTrufas (`/api/v1/cripto-trufa`)
 | Método | Ruta | Roles | Descripción |
 |---|---|---|---|
+| `GET` | `/dashboard` | CLIENTE | Saldo + cupones activos + últimos 5 movimientos |
 | `GET` | `/balance` | CLIENTE | Saldo actual |
 | `GET` | `/history` | CLIENTE | Historial de movimientos |
-| `GET` | `/coupons/catalog` | CLIENTE | Catálogo de cupones canjeables |
-| `POST` | `/coupons/redeem` | CLIENTE | Canjear cupón |
+| `GET` | `/coupons/available` | CLIENTE | Catálogo de cupones canjeables (cacheado 5 min) |
+| `POST` | `/coupons/redeem` | CLIENTE | Canjear cupón (Header opcional `Idempotency-Key`) |
 | `GET` | `/coupons/mine` | CLIENTE | Mis cupones |
-| `POST` | `/adjust` | ADMIN | Ajuste manual de puntos |
+| `GET` | `/public-config` | CLIENTE | Configuración activa (solo lectura) |
+| `POST` | `/play-ruleta` | CLIENTE | Ruleta Dulce (costo 50 pts) |
+| `POST` | `/adjust` | ADMIN | Ajuste manual de puntos (auditado) |
 | `GET` | `/config` | ADMIN | Configuración activa |
-| `PUT` | `/config` | ADMIN | Actualizar configuración |
+| `PUT` | `/config` | ADMIN | Actualizar configuración global |
+| `GET` | `/admin/clientes` | ADMIN | Clientes con saldo |
+| `GET` | `/admin/history/{id_cliente}` | ADMIN | Historial de un cliente |
+| `GET` | `/admin/coupons` | ADMIN | Listar cupones maestros |
+| `POST` | `/admin/coupons` | ADMIN | Crear cupón maestro |
+| `PUT` | `/admin/coupons/{id}` | ADMIN | Actualizar cupón maestro |
+| `DELETE` | `/admin/coupons/{id}` | ADMIN | Desactivar cupón maestro (borrado lógico) |
 
 ### Dashboard (`/api/v1/dashboard`)
 | Método | Ruta | Roles | Descripción |
@@ -206,6 +215,7 @@ class PaginatedResponse(BaseModel, Generic[T]):
 | 422 | `BUSINESS_RULE_ERROR` | Regla de negocio violada |
 | 422 | `INSUFFICIENT_STOCK` | Stock insuficiente |
 | 422 | `INSUFFICIENT_CRIPTOTRUFAS` | CriptoTrufas insuficientes |
+| 422 | `COUPON_DISABLED` | Cupón maestro inactivo o no existe |
 | 500 | `INTERNAL_ERROR` | Error no esperado |
 | 503 | `EXTERNAL_SERVICE_ERROR` | Pasarela de pago caída |
 

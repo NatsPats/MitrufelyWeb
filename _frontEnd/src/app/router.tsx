@@ -23,6 +23,7 @@ const ReportsPage = lazy(() => import('@/features/reports/pages/ReportsPage'))
 const AdminReviewsPage = lazy(() => import('@/features/reviews/pages/AdminReviewsPage'))
 const AdminIssuesPage = lazy(() => import('@/features/issues/pages/AdminIssuesPage'))
 const CriptoTrufasPage = lazy(() => import('@/features/sweetcoins/pages/SweetCoinsPage'))
+const AdminSweetCoinsPage = lazy(() => import('@/features/sweetcoins/pages/AdminSweetCoinsPage'))
 const NotFoundPage = lazy(() => import('@/pages/NotFoundPage'))
 const CartPage = lazy(() => import('@/features/cart/pages/CartPage'))
 const ProductDetailView = lazy(() => import('@/features/products/pages/ProductDetailView'))
@@ -129,6 +130,7 @@ export function AppRouter() {
             {/* Solo ADMIN y MANAGER */}
             <Route element={<RequirePermission permission="VIEW_REPORTS" />}>
               <Route path="/reports" element={<ReportsPage />} />
+              <Route path="/dashboard/criptotrufas" element={<AdminSweetCoinsPage />} />
               <Route path="/dashboard/atencion-cliente" element={<AdminCustomerServiceLayout />}>
                 <Route path="reviews" element={<AdminReviewsPage />} />
                 <Route path="incidencias" element={<AdminIssuesPage />} />

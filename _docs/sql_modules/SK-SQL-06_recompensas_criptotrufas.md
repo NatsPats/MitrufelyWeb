@@ -87,11 +87,11 @@ JOIN entre `clientes` y `SUM(movimientos_puntos.cantidad)`. Útil para APIs de c
 - Rechaza la inserción si `saldo_nuevo < 0` (no se puede quedar en negativo).
 - **Asigna automáticamente** `NEW.saldo_puntos_resultante`.
 
-### `tg_ventas_otorgar_puntos` (AFTER UPDATE OF estado_pago en `ventas`)
-Activado cuando `estado_pago` cambia a `'PAGADO'`:
+### `tg_ventas_otorgar_puntos` (AFTER INSERT OR UPDATE en `ventas`)
+Activado cuando `estado_pago` es `'PAGADO'` (tanto si la venta se inserta directamente pagada —tarjeta online— como si se actualiza luego —pago manual admin—). El trigger distingue `TG_OP` antes de leer `OLD` y guarda contra duplicación verificando si ya existe un `ACUMULACION_VENTA` para ese `id_venta`.
 1. Obtiene la configuración activa con `fn_config_recompensas_activa()`.
 2. Calcula `puntos = FLOOR(total * tasa_conversion)`.
-3. Inserta `ACUMULACION_VENTA` en `movimientos_puntos`.
+3. **Solo inserta el movimiento si `v_puntos > 0`** (la restricción `movimientos_puntos_cantidad_check` exige `cantidad > 0`), evitando abortar el checkout en compras de monto muy bajo.
 4. Actualiza `ventas.puntos_ganados`.
 5. Si la venta usó cupón → lo marca como `USADO`.
 
@@ -110,6 +110,7 @@ Activado cuando `estado` cambia a `'ANULADO'`:
 - La tasa de conversión aplica al `total` de la venta (post-descuento).
 - Los puntos tienen fecha de expiración calculada en el trigger de otorgamiento.
 - Un mismo `id_venta` no puede tener dos movimientos `ACUMULACION_VENTA` (guard en trigger).
+- `cupones_maestro.id_categoria` (nullable) restringe el descuento a los items del carrito (productos individuales o componentes de paquetes) que pertenezcan a esa categoría. `NULL` aplica a todo el catálogo.
 
 ---
 

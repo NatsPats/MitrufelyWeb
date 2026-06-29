@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { AlertTriangle, Calendar, User, Search, Filter, Loader2, X, Package, CheckCircle2, Clock } from 'lucide-react'
+import { AlertTriangle, User, Search, Filter, Loader2, X, Package, CheckCircle2, Clock } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { toast } from 'sonner'

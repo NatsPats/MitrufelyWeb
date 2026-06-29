@@ -85,8 +85,10 @@ export const cartApi = {
     await api.delete('/cart')
   },
 
-  checkoutCart: async (): Promise<CartCheckoutResponse> => {
-    const { data } = await api.post<CartCheckoutResponse>('/ventas/checkout/cart')
+  checkoutCart: async (id_cupon_cliente?: number): Promise<CartCheckoutResponse> => {
+    const { data } = await api.post<CartCheckoutResponse>('/ventas/checkout/cart', null, {
+      params: id_cupon_cliente ? { id_cupon_cliente } : undefined,
+    })
     return mapCheckoutResponse(data)
   },
 }

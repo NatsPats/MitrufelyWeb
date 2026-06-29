@@ -133,6 +133,7 @@ class VentaService(AbstractService[VentaResponse, VentaRequest, None, int]):
                 nueva_venta.id_cliente = real_id_cliente
 
                 n_productos_total = 0
+                productos_comprados = []
 
                 for item in dto.productos or []:
                     stmt = select(Producto).where(Producto.id_producto == item.id_producto)
@@ -161,6 +162,10 @@ class VentaService(AbstractService[VentaResponse, VentaRequest, None, int]):
                             subtotal=linea_subtotal,
                         )
                     )
+                    productos_comprados.append({
+                        "id_categoria": producto.id_categoria,
+                        "subtotal": linea_subtotal
+                    })
 
                 for item in dto.paquetes or []:
                     paquete_db = await self.paquete_repo.get_by_id(item.id_paquete)
@@ -201,6 +206,10 @@ class VentaService(AbstractService[VentaResponse, VentaRequest, None, int]):
                                 subtotal=precio_componente * item.cantidad,
                             )
                         )
+                        productos_comprados.append({
+                            "id_categoria": producto.id_categoria,
+                            "subtotal": precio_componente * item.cantidad
+                        })
 
                     subtotal += precio_paquete * item.cantidad
                     nueva_venta.paquetes_vendidos.append(
@@ -212,23 +221,61 @@ class VentaService(AbstractService[VentaResponse, VentaRequest, None, int]):
                         )
                     )
 
+                # ── Aplicar Cupón de Descuento ──
+                monto_descuento = Decimal("0.00")
+                if dto.id_cupon_cliente is not None:
+                    from app.infrastructure.database.models.cupones import CuponCliente
+                    from app.infrastructure.database.models.enums import EstadoCuponEnum
+
+                    stmt_cup = select(CuponCliente).options(selectinload(CuponCliente.cupon_maestro)).where(
+                        CuponCliente.id_cupon_cliente == dto.id_cupon_cliente,
+                        CuponCliente.id_cliente == real_id_cliente
+                    )
+                    res_cup = await self.session.execute(stmt_cup)
+                    cupon_cliente_obj = res_cup.scalar_one_or_none()
+
+                    if not cupon_cliente_obj:
+                        raise NotFoundError(f"Cupón de cliente con ID {dto.id_cupon_cliente} no encontrado.")
+                    if cupon_cliente_obj.estado != EstadoCuponEnum.DISPONIBLE:
+                        raise BusinessRuleError("El cupón seleccionado ya ha sido usado o no está disponible.")
+                    if cupon_cliente_obj.fecha_expiracion <= datetime.now():
+                        raise BusinessRuleError("El cupón seleccionado ha expirado.")
+
+                    id_cat_restr = cupon_cliente_obj.cupon_maestro.id_categoria
+                    if id_cat_restr is not None:
+                        subtotal_elegible = sum(
+                            p["subtotal"] for p in productos_comprados if p["id_categoria"] == id_cat_restr
+                        )
+                    else:
+                        subtotal_elegible = subtotal
+
+                    porcentaje = cupon_cliente_obj.cupon_maestro.porcentaje_descuento
+                    monto_descuento = (subtotal_elegible * (porcentaje / Decimal("100.00"))).quantize(Decimal("0.01"))
+
+                    # Marcar cupón como usado de inmediato en la transacción
+                    cupon_cliente_obj.estado = EstadoCuponEnum.USADO
+                    cupon_cliente_obj.fecha_uso = datetime.now()
+
+                subtotal_con_descuento = subtotal - monto_descuento
+
                 # ── Cálculo de envío ───────────────────────────────────────
                 shipping_result = None
                 if self.config_service:
-                    shipping_result = await self.config_service.calculate_shipping(subtotal)
+                    shipping_result = await self.config_service.calculate_shipping(subtotal_con_descuento)
                     shipping_cost = shipping_result.shipping_cost
                     free_shipping = shipping_result.free_shipping_applied
                     total_final = shipping_result.total_final
                 else:
                     shipping_cost = Decimal("0.00")
                     free_shipping = False
-                    total_final = subtotal
+                    total_final = subtotal_con_descuento
 
                 # ── Cálculos fiscales ──────────────────────────────────────
-                base_imponible = (subtotal / Decimal("1.18")).quantize(Decimal("0.01"))
-                igv = (subtotal - base_imponible).quantize(Decimal("0.01"))
+                base_imponible = (subtotal_con_descuento / Decimal("1.18")).quantize(Decimal("0.01"))
+                igv = (subtotal_con_descuento - base_imponible).quantize(Decimal("0.01"))
 
                 nueva_venta.subtotal_productos = subtotal
+                nueva_venta.monto_descuento_cupon = monto_descuento
                 nueva_venta.shipping_cost_applied = shipping_cost
                 nueva_venta.free_shipping_applied = free_shipping
                 nueva_venta.base_imponible = base_imponible

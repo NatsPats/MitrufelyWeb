@@ -9,6 +9,7 @@ import structlog
 from redis.asyncio import Redis
 
 from app.core.exceptions import (
+    BusinessRuleError,
     DuplicateResourceError,
     ExternalServiceError,
     InvalidCredentialsError,
@@ -446,6 +447,15 @@ class AuthService:
         user = await self._repo.get_by_id(user_id)
         if not user:
             raise NotFoundError("Usuario no encontrado")
+
+        # Validar si el número de documento ya está registrado por otro usuario
+        stmt_dup = select(DatosFiscales).where(
+            DatosFiscales.numero_documento == data.numero_documento,
+            DatosFiscales.id_usuario != user_id
+        )
+        res_dup = await self._repo._session.execute(stmt_dup)
+        if res_dup.scalar_one_or_none():
+            raise BusinessRuleError("Este número de documento ya está registrado por otro usuario en el sistema.")
 
         # Buscar si ya existe un registro predeterminado
         stmt = select(DatosFiscales).where(

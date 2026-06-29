@@ -95,17 +95,22 @@ def make_venta_mock(
     venta.estado = estado
     venta.estado_pago = estado_pago
     venta.total = Decimal(total)
+    venta.total_final = Decimal(total)
+    venta.shipping_cost_applied = Decimal("0.00")
+    venta.free_shipping_applied = False
+    venta.cancellation_reason = None
+    venta.refund_amount = None
     venta.puntos_ganados = puntos_ganados
-    venta.fecha_venta = None
-    venta.subtotal_productos = None
-    venta.costo_envio = None
-    venta.monto_descuento_cupon = None
-    venta.base_imponible = None
-    venta.igv = None
-    venta.detalles = None
-    venta.paquetes_vendidos = None
+    venta.fecha_venta = datetime.now()
+    venta.subtotal_productos = Decimal(total)
+    venta.costo_envio = Decimal("0.00")
+    venta.monto_descuento_cupon = Decimal("0.00")
+    venta.base_imponible = Decimal(total)
+    venta.igv = Decimal("0.00")
+    venta.detalles = []
+    venta.paquetes_vendidos = []
     venta.metodos_pago = []
-    venta.documentos = None
+    venta.documentos = []
     return venta
 
 
@@ -420,6 +425,103 @@ class TestVentaServiceCheckout:
         assert len(venta_obj.detalles) == 2
         assert len(venta_obj.paquetes_vendidos) == 1
 
+    async def test_checkout_package_with_category_coupon(
+        self,
+        service: VentaService,
+        mock_session: AsyncMock,
+        mock_paquete_repo: AsyncMock,
+    ) -> None:
+        from app.infrastructure.database.models.cupones import CuponCliente, CuponMaestro
+        from app.infrastructure.database.models.enums import EstadoCuponEnum, OrigenCuponEnum
+        from datetime import datetime, timedelta
+
+        # 1. Producto 1 (id_categoria=3, precio=S/. 10)
+        prod1 = make_producto_db(id_producto=1, precio="10.00", stock_actual=10)
+        prod1.id_categoria = 3
+
+        # 2. Producto 2 (id_categoria=5, precio=S/. 20)
+        prod2 = make_producto_db(id_producto=2, precio="20.00", stock_actual=10)
+        prod2.id_categoria = 5
+
+        # 3. Paquete (contiene 2 de prod1 y 1 de prod2)
+        # Precio del paquete: 2 * 10 + 1 * 20 = S/. 40
+        # Categoría 3 subtotal elegible dentro del paquete: 2 * 10 = S/. 20 per package
+        paquete = make_paquete_db(
+            id_paquete=1,
+            nombre="Combo Test",
+            componentes=[
+                make_paquete_producto(prod1, cantidad=2),
+                make_paquete_producto(prod2, cantidad=1),
+            ]
+        )
+        mock_paquete_repo.get_by_id.return_value = paquete
+
+        # 4. Cupón maestro con restricción a categoría 3 y 50% de descuento
+        cupon_maestro = CuponMaestro(
+            id_cupon=1,
+            nombre="Cupon Cat 3",
+            porcentaje_descuento=Decimal("50.00"),
+            id_categoria=3,
+            dias_vigencia=7,
+            estado=True
+        )
+        cupon_cliente = CuponCliente(
+            id_cupon_cliente=99,
+            id_cliente=1,
+            id_cupon=1,
+            codigo_unico="CAT3-50",
+            estado=EstadoCuponEnum.DISPONIBLE,
+            origen=OrigenCuponEnum.PREMIO_JUEGO,
+            fecha_adquisicion=datetime.now(),
+            fecha_expiracion=datetime.now() + timedelta(days=7),
+            cupon_maestro=cupon_maestro
+        )
+
+        # 5. Mockear las ejecuciones de SQLAlchemy en la session
+        from app.infrastructure.database.models.usuarios import Cliente
+        mock_cliente = Cliente(id_cliente=1, id_usuario=1)
+
+        def mock_execute(stmt):
+            stmt_str = str(stmt).lower()
+            res = MagicMock()
+            if "cupon" in stmt_str or "id_cupon_cliente" in stmt_str:
+                res.scalar_one_or_none.return_value = cupon_cliente
+            elif "cliente" in stmt_str:
+                res.scalar_one_or_none.return_value = mock_cliente
+            else:
+                res.scalar_one_or_none.return_value = None
+            return res
+
+        mock_session.execute.side_effect = mock_execute
+
+        # 6. Request de checkout con 2 paquetes
+        # Total subtotal de productos en los 2 paquetes: 2 * 40 = S/. 80
+        # Total elegible para descuento (Cat 3): 2 * 20 = S/. 40
+        # Descuento (50%): S/. 20
+        dto = VentaRequest(
+            productos=[],
+            paquetes=[ItemPaquete(id_paquete=1, cantidad=2)],
+            tipo_pago=TipoPagoEnum.TARJETA,
+            id_cupon_cliente=99
+        )
+
+        session_add_calls: list = []
+        mock_session.add.side_effect = lambda obj: session_add_calls.append(obj)
+
+        async def flush_apply():
+            for obj in session_add_calls:
+                _apply_venta_defaults(obj)
+        mock_session.flush.side_effect = flush_apply
+
+        # 7. Ejecutar el checkout
+        await service.create_checkout(id_cliente=1, dto=dto)
+
+        # 8. Validar resultados
+        venta_obj = next(obj for obj in session_add_calls if type(obj).__name__ == "Venta")
+        assert venta_obj.subtotal_productos == Decimal("80.00")
+        assert venta_obj.monto_descuento_cupon == Decimal("20.00")
+        assert venta_obj.total_final == Decimal("60.00")  # 80 - 20
+
     # ── Documento y MetodoPago ────────────────────────────────────────────────
 
     async def test_crea_documento_boleta_en_checkout(
@@ -511,7 +613,7 @@ class TestVentaServiceConfirmarPago:
         mock_session.execute = AsyncMock(return_value=mock_result)
 
         with pytest.raises(NotFoundError):
-            await service.confirmar_pago(id_venta=999)
+            await service.confirmar_pago(id_venta=999, id_usuario=999)
 
     async def test_confirmar_pago_venta_anulada(
         self,
@@ -525,8 +627,8 @@ class TestVentaServiceConfirmarPago:
         mock_session.execute = AsyncMock(return_value=mock_result)
 
         with pytest.raises(BusinessRuleError) as exc_info:
-            await service.confirmar_pago(id_venta=1)
-        assert "anulada" in exc_info.value.message.lower()
+            await service.confirmar_pago(id_venta=1, id_usuario=1)
+        assert "anulado" in exc_info.value.message.lower()
 
     async def test_confirmar_pago_ya_entregada(
         self,
@@ -540,8 +642,8 @@ class TestVentaServiceConfirmarPago:
         mock_session.execute = AsyncMock(return_value=mock_result)
 
         with pytest.raises(BusinessRuleError) as exc_info:
-            await service.confirmar_pago(id_venta=1)
-        assert "entregada" in exc_info.value.message.lower()
+            await service.confirmar_pago(id_venta=1, id_usuario=1)
+        assert "entregado" in exc_info.value.message.lower()
 
     async def test_confirmar_pago_exitoso(
         self,
@@ -564,9 +666,9 @@ class TestVentaServiceConfirmarPago:
 
         mock_session.execute = AsyncMock(return_value=mock_result_venta)
 
-        result = await service.confirmar_pago(id_venta=1)
+        result = await service.confirmar_pago(id_venta=1, id_usuario=1)
 
-        assert result.estado == "ENTREGADO"
+        assert result.estado == "PAGADO"
         assert result.estado_pago == "PAGADO"
         assert pago_mock.estado_transaccion == "APROBADO"
 

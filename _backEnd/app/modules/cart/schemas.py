@@ -16,6 +16,14 @@ class UpdateCartItemRequest(BaseModel):
     cantidad: int = Field(..., gt=0)
 
 
+class PackageComponentResponse(BaseModel):
+    id_producto: int
+    nombre: str
+    cantidad: int
+    precio_unitario: Decimal
+    id_categoria: int
+
+
 class CartItemResponse(BaseModel):
     id_producto: int
     nombre: str
@@ -24,6 +32,8 @@ class CartItemResponse(BaseModel):
     imagen_url: Optional[str] = None
     es_paquete: bool = False
     id_paquete: Optional[int] = None
+    id_categoria: Optional[int] = None
+    productos: Optional[List[PackageComponentResponse]] = None
 
 
 class CartResponse(BaseModel):

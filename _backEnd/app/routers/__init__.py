@@ -20,7 +20,7 @@ from app.modules.products.router_productos import router as productos_router
 from app.modules.reviews.router import router as reviews_router
 from app.routers.storage import router as storage_router
 
-# from app.modules.sweetcoins.router import router as sweetcoins_router
+from app.modules.sweetcoins.router import router as sweetcoins_router
 # from app.modules.reports.router import router as reports_router
 # from app.modules.users.router import router as users_router
 
@@ -55,6 +55,6 @@ api_router.include_router(dashboard_router)
 api_router.include_router(reviews_router)
 api_router.include_router(issues_router)
 api_router.include_router(notifications_router)
-# api_router.include_router(sweetcoins_router)
+api_router.include_router(sweetcoins_router)
 # api_router.include_router(reports_router)
 # api_router.include_router(users_router)

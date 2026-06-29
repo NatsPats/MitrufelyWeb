@@ -17,7 +17,7 @@ Deprecado (mantiene compatibilidad):
   PUT /ventas/{id}/entregar  →  aliases marcar_entregado_admin()
 """
 
-from typing import Annotated, List
+from typing import Annotated, List, Optional
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 from redis.asyncio import Redis
@@ -80,6 +80,7 @@ async def checkout_from_cart(
     current_user: AuthUser,
     service: VentaServiceDep,
     redis: RedisDep,
+    id_cupon_cliente: Optional[int] = Query(None),
 ) -> CartCheckoutResponse:
     """Convierte el carrito Redis del usuario en un pedido. Limpia el carrito al finalizar."""
     cart_service = CartService(redis)
@@ -101,6 +102,7 @@ async def checkout_from_cart(
 
     dto = VentaRequest(
         origen_venta=OrigenVentaEnum.WEB,
+        id_cupon_cliente=id_cupon_cliente,
         productos=productos,
         paquetes=paquetes,
         tipo_pago=TipoPagoEnum.TARJETA,

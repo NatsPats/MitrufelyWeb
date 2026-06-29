@@ -108,6 +108,24 @@ class InsufficientSweetCoinsError(MifrufelyBaseError):
     message = "SweetCoins insuficientes"
 
 
+class CouponExpiredError(MifrufelyBaseError):
+    status_code = HTTPStatus.UNPROCESSABLE_ENTITY
+    error_code = "COUPON_EXPIRED"
+    message = "El cupón ha expirado"
+
+
+class CouponDisabledError(MifrufelyBaseError):
+    status_code = HTTPStatus.UNPROCESSABLE_ENTITY
+    error_code = "COUPON_DISABLED"
+    message = "El cupón no está activo o disponible"
+
+
+class CouponAlreadyRedeemedError(MifrufelyBaseError):
+    status_code = HTTPStatus.UNPROCESSABLE_ENTITY
+    error_code = "COUPON_ALREADY_REDEEMED"
+    message = "El cupón ya ha sido utilizado"
+
+
 # ── HTTP 500 ─────────────────────────────────────────────────────────────────
 
 class DatabaseError(MifrufelyBaseError):

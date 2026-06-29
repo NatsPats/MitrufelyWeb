@@ -88,8 +88,8 @@ export function useClearCart() {
 export function useCheckoutCart() {
   const queryClient = useQueryClient()
 
-  return useMutation<CartCheckoutResponse>({
-    mutationFn: () => cartApi.checkoutCart(),
+  return useMutation<CartCheckoutResponse, Error, number | undefined>({
+    mutationFn: (id_cupon_cliente?: number) => cartApi.checkoutCart(id_cupon_cliente),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: CART_QUERY_KEY })
       queryClient.invalidateQueries({ queryKey: ['orders'] })

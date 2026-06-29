@@ -23,6 +23,7 @@ import confetti from 'canvas-confetti'
 import { useNavigate } from 'react-router'
 import { useCartStore } from '@/stores/cart.store'
 import { useCheckoutCart } from '../hooks/useCart'
+import { useCriptoTrufaStore } from '@/stores/criptotrufa.store'
 import { useDatosFiscales, useUpsertDatosFiscales, useUpdateProfile, useProfileData } from '@/features/auth/hooks/useProfile'
 import {
   fiscalSchema, type FiscalFormData,
@@ -96,12 +97,14 @@ export function PaymentModal({ isOpen, onClose, subtotal, total }: PaymentModalP
   const [editEnvio, setEditEnvio] = useState(false)
   const [showCardFront, setShowCardFront] = useState(true)
 
-  const { discount, coupon, clearDiscount } = useCartStore()
+  const { discount, coupon, fidelizacionCoupon, clearDiscount } = useCartStore()
   const checkout = useCheckoutCart()
   const { data: fiscalData, isLoading: fiscalLoading } = useDatosFiscales()
   const upsertFiscal = useUpsertDatosFiscales()
   const { data: profileData } = useProfileData()
   const updateProfile = useUpdateProfile()
+
+  const { hydrateSweetCoins } = useCriptoTrufaStore()
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const confettiRef = useRef<confetti.CreateTypes | null>(null)
@@ -136,6 +139,7 @@ export function PaymentModal({ isOpen, onClose, subtotal, total }: PaymentModalP
       setReferencia('')
       setTelefono('')
       setEnvioInitialized(false)
+      hydrateSweetCoins()
     }
   }, [isOpen])
 
@@ -232,7 +236,7 @@ export function PaymentModal({ isOpen, onClose, subtotal, total }: PaymentModalP
   const handlePagoSubmit = tarjetaForm.handleSubmit(async () => {
     setStep(4)
     try {
-      const result = await checkout.mutateAsync()
+      const result = await checkout.mutateAsync(fidelizacionCoupon?.id_cupon_cliente)
       setVentaId(result.id_venta)
       clearDiscount()
       setStep(5)
@@ -325,7 +329,7 @@ export function PaymentModal({ isOpen, onClose, subtotal, total }: PaymentModalP
                   )}
                   <div className="flex justify-between text-lg font-black text-[#5c0f1b] border-t border-[#5c0f1b]/10 pt-2 mt-2">
                     <span>Total</span>
-                    <span>S/ {Number(total || 0).toFixed(2)}</span>
+                    <span>S/ {Number(total).toFixed(2)}</span>
                   </div>
                 </div>
 

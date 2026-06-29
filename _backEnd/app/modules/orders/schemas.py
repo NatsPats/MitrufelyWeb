@@ -226,8 +226,43 @@ class VentaResponse(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def extract_has_review(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            if "order_review" in data:
+                data["has_review"] = data["order_review"] is not None
+            return data
+
+        # Evitar lazy loading en contexto asíncrono para objetos reales de SQLAlchemy
+        from sqlalchemy.orm.state import InstanceState
+        if hasattr(data, "_sa_instance_state") and isinstance(getattr(data, "_sa_instance_state", None), InstanceState):
+            from sqlalchemy import inspect
+            try:
+                insp = inspect(data)
+                if insp is not None:
+                    loaded_dict = {}
+                    # Copiar columnas cargadas
+                    for col in insp.mapper.column_attrs:
+                        if col.key not in insp.unloaded:
+                            loaded_dict[col.key] = getattr(data, col.key)
+                    # Copiar relaciones cargadas
+                    for rel in insp.mapper.relationships:
+                        if rel.key not in insp.unloaded:
+                            loaded_dict[rel.key] = getattr(data, rel.key)
+                    
+                    # Establecer has_review si order_review está cargado
+                    if "order_review" not in insp.unloaded:
+                        loaded_dict["has_review"] = getattr(data, "order_review", None) is not None
+                    else:
+                        loaded_dict["has_review"] = False
+                    
+                    return loaded_dict
+            except Exception:
+                pass
+
         if hasattr(data, "order_review"):
-            object.__setattr__(data, "has_review", data.order_review is not None)
+            try:
+                object.__setattr__(data, "has_review", data.order_review is not None)
+            except Exception:
+                pass
         return data
 
     model_config = ConfigDict(from_attributes=True)

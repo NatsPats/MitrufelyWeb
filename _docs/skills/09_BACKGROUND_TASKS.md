@@ -1,7 +1,7 @@
 # SKILL 09 — Background Tasks (Celery + Redis) — ACTUALIZADO
 
 > **CUÁNDO USAR:** Antes de implementar tareas asíncronas, workers, generación de PDF, o jobs de expiración.
-> **Última actualización:** 2026-06-09 — Refleja implementación real post-Fase 4.
+> **Última actualización:** 2026-06-29 — Refleja implementación real post-Fase 6.
 
 ---
 
@@ -28,8 +28,9 @@ app/infrastructure/workers/
     ├── __init__.py
     ├── inventory.py       ✅ Expiración de lotes (implementado)
     ├── ventas.py          ✅ Expiración de ventas pendientes (implementado)
-    ├── reports.py         ⚠️ Stub — PDF/Excel (pendiente Fase 6)
-    ├── analytics.py       ⚠️ Stub — Agregaciones diarias (pendiente Fase 6)
+    ├── sweetcoins.py      ✅ Expiración de cupones CriptoTrufas (implementado, Fase 6)
+    ├── reports.py         ⚠️ Stub — PDF/Excel (pendiente Fase 7)
+    ├── analytics.py       ⚠️ Stub — Agregaciones diarias (pendiente Fase 7)
     └── notifications.py   ⚠️ Stub — Email/WhatsApp (pendiente)
 ```
 
@@ -49,6 +50,7 @@ celery_app = Celery(
         "app.infrastructure.workers.tasks.analytics",
         "app.infrastructure.workers.tasks.inventory",
         "app.infrastructure.workers.tasks.ventas",       # ← Fase 4
+        "app.infrastructure.workers.tasks.sweetcoins",   # ← Fase 6
     ],
 )
 
@@ -74,6 +76,10 @@ celery_app.conf.update(
         "expire-pending-ventas": {                                # ← Fase 4
             "task": "app.infrastructure.workers.tasks.ventas.expire_pending",
             "schedule": 300.0,  # Cada 5 minutos
+        },
+        "expire-sweetcoins-daily": {                               # ← Fase 6
+            "task": "app.infrastructure.workers.tasks.sweetcoins.expire_coupons",
+            "schedule": 86400.0,  # Diario
         },
     },
 )
@@ -125,23 +131,43 @@ async def _run_expire_pending_ventas() -> int:
 
 > **Nota:** La anulación dispara `tg_ventas_anular` que revierte stock, libera cupón y contra-asienta puntos automáticamente.
 
-### 4.3 Generación de PDF (stub — pendiente Fase 6)
+### 4.3 Expiración de Cupones CriptoTrufas (Fase 6 — implementada)
+
+```python
+# app/infrastructure/workers/tasks/sweetcoins.py
+@celery_app.task(name="app.infrastructure.workers.tasks.sweetcoins.expire_coupons",
+                 bind=True, max_retries=3, default_retry_delay=300)
+def expire_coupons(self) -> dict:
+    vencidos = asyncio.run(_run_expire_coupons())
+    return {"status": "ok", "cupones_expirados": vencidos}
+
+async def _run_expire_coupons() -> int:
+    async with AsyncSessionFactory() as session:
+        async with session.begin():
+            result = await session.execute(text("SELECT sp_expirar_cupones_vencidos()"))
+            vencidos: int = result.scalar_one()
+    return vencidos
+```
+
+La lógica de dominio vive en `app/modules/sweetcoins/expiration_service.py` (`CouponExpirationService.expire_all`), que la tarea invoca para mantener el worker desacoplado del servicio. Programa: diario (86400s) en `beat_schedule` como `expire-sweetcoins-daily`. El trigger `tg_cupones_cliente_normalizar` normaliza estados en cada INSERT/UPDATE.
+
+### 4.4 Generación de PDF (stub — pendiente Fase 7)
 
 ```python
 # app/infrastructure/workers/tasks/reports.py
 @celery_app.task(name="app.infrastructure.workers.tasks.reports.generate_sales_pdf",
                  bind=True, max_retries=3)
 def generate_sales_pdf(self, report_params):
-    raise NotImplementedError("PDF generation not yet implemented (Fase 6)")
+    raise NotImplementedError("PDF generation not yet implemented (Fase 7)")
 ```
 
-### 4.4 Agregación Analítica (stub — pendiente Fase 6)
+### 4.5 Agregación Analítica (stub — pendiente Fase 7)
 
 ```python
 # app/infrastructure/workers/tasks/analytics.py
 @celery_app.task(name="app.infrastructure.workers.tasks.analytics.aggregate_daily")
 def aggregate_daily():
-    raise NotImplementedError("Analytics aggregation not yet implemented (Fase 6)")
+    raise NotImplementedError("Analytics aggregation not yet implemented (Fase 7)")
 ```
 
 ---

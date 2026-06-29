@@ -22,7 +22,7 @@ Están diseñados para ser pasados a la IA como contexto de referencia antes de 
 | [`03_AUTH_SECURITY.md`](./03_AUTH_SECURITY.md)                 | Autenticación y RBAC                      | JWT, roles, dependencias de seguridad, permisos          |
 | [`04_CHECKOUT_FLOW.md`](./04_CHECKOUT_FLOW.md)                 | Flujo de Venta Transaccional              | Carrito → Checkout → Pago → Lotes FEFO → Puntos          |
 | [`05_INVENTORY_STOCK.md`](./05_INVENTORY_STOCK.md)             | Inventario y Lotes                        | Gestión de lotes, Kardex, FEFO, expiración, stock        |
-| [`06_CriptoTrufas.md`](./06_CriptoTrufas.md)                       | CriptoTrufas (Fidelización)                 | Cupones, puntos, canjes, configuración de recompensas    |
+| [`06_CRIPTOTRUFA.md`](./06_CRIPTOTRUFA.md)                     | CriptoTrufas (Fidelización)                | Cupones, puntos, canjes, ruleta, panel admin de fidelización |
 | [`07_FRONTEND_ARCHITECTURE.md`](./07_FRONTEND_ARCHITECTURE.md) | Arquitectura React 19 + Vite              | Estado híbrido, routing, componentes, Tailwind v4        |
 | [`08_API_CONTRACTS.md`](./08_API_CONTRACTS.md)                 | Contratos de API                          | Envelopes de respuesta, paginación, códigos de error     |
 | [`09_BACKGROUND_TASKS.md`](./09_BACKGROUND_TASKS.md)           | Celery / Workers                          | Tareas asíncronas, PDF, notificaciones, expiración batch |
@@ -79,8 +79,8 @@ app/modules/
 ├── config/        # Configuración dinámica del negocio         ← [Fase 5]
 ├── reviews/       # Calificaciones e incidencias               ← [Fase 5]
 ├── notifications/ # Eventos y notificaciones en tiempo real    ← [Fase 5]
-├── CriptoTrufas/  # Puntos, cupones, canjes                   ← [Fase 5 pendiente]
-├── reports/       # PDF, Excel, documentos                    ← [Fase 6 pendiente]
+├── sweetcoins/    # Puntos CriptoTrufas, cupones, ruleta       ← [Fase 6]
+├── reports/       # PDF, Excel, documentos                    ← [Fase 7 pendiente]
 └── dashboard/     # Métricas, KPIs                            ← [Fase 5]
 ```
 
@@ -95,6 +95,7 @@ app/modules/
 | Fase 3 — Inventario FEFO | [`_docs/fases/fase3_inventario_fefo.md`](../fases/fase3_inventario_fefo.md) | ✅ Implementado |
 | Fase 4 — Carrito y Checkout | [`_docs/fases/fase4_checkout_ventas.md`](../fases/fase4_checkout_ventas.md) | ✅ Implementado |
 | Fase 5 — Pedidos FSM M14 | [`_docs/fases/fase5_pedidos_extendido.md`](../fases/fase5_pedidos_extendido.md) | ✅ Implementado |
+| Fase 6 — CriptoTrufas y Cuponería | [`_docs/fases/fase6_criptotrufas_cuponeria.md`](../fases/fase6_criptotrufas_cuponeria.md) | ✅ Implementado |
 
 ---
 
@@ -104,6 +105,7 @@ app/modules/
 |--------|---------------|
 | `products/` (paquetes) | `04_CHECKOUT_FLOW.md` § Expansión + `08_API_CONTRACTS.md` § Packages + `12_STORAGE_MEDIA.md` |
 | `orders/` (checkout & FSM) | `04_CHECKOUT_FLOW.md` + `05_INVENTORY_STOCK.md` + `15_ORDERS_FSM_AND_DELIVERY.md` |
+| `sweetcoins/` (CriptoTrufas) | `06_CRIPTOTRUFA.md` + `04_CHECKOUT_FLOW.md` §11 + `09_BACKGROUND_TASKS.md` §4.3 + `SK-SQL-06` |
 | `storage/` | `12_STORAGE_MEDIA.md` (subida, Pillow, rollback transaccional) |
 | `tests/` | `10_TESTING.md` (conftest real, NullPool, Redis mock) |
 | `frontend/` (loaders) | `07_FRONTEND_ARCHITECTURE.md` + `14_REACT_QUERY_LOADERS.md` |

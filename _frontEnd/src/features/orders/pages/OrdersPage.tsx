@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   AlertCircle,
   HelpCircle,
+  Loader2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -57,9 +58,18 @@ export default function OrdersPage() {
 
   const confirmTransition = () => {
     if (confirmModal.id && confirmModal.action) {
-      transitionMut.mutate({ id: confirmModal.id, action: confirmModal.action })
+      transitionMut.mutate(
+        { id: confirmModal.id, action: confirmModal.action },
+        {
+          onSuccess: () => {
+            closeConfirmModal()
+          },
+          onError: () => {
+            closeConfirmModal()
+          },
+        }
+      )
     }
-    setConfirmModal({ isOpen: false, id: null, action: null })
   }
 
   const closeConfirmModal = () => {
@@ -316,15 +326,24 @@ export default function OrdersPage() {
             <div className="flex gap-3">
               <button 
                 onClick={closeConfirmModal}
-                className="flex-1 py-2.5 rounded-xl border border-stone-200 text-stone-600 font-bold text-sm hover:bg-stone-50 transition-all cursor-pointer"
+                disabled={transitionMut.isPending}
+                className="flex-1 py-2.5 rounded-xl border border-stone-200 text-stone-600 font-bold text-sm hover:bg-stone-50 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Cancelar
               </button>
               <button 
                 onClick={confirmTransition}
-                className="flex-1 py-2.5 rounded-xl bg-[#5c0f1b] text-white font-bold text-sm hover:bg-[#7a1525] transition-all cursor-pointer shadow-md"
+                disabled={transitionMut.isPending}
+                className="flex-1 py-2.5 rounded-xl bg-[#5c0f1b] text-white font-bold text-sm hover:bg-[#7a1525] transition-all cursor-pointer shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                Sí, aplicar
+                {transitionMut.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Procesando...
+                  </>
+                ) : (
+                  'Sí, aplicar'
+                )}
               </button>
             </div>
           </div>

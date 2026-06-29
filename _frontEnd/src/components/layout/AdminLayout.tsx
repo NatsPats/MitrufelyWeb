@@ -79,24 +79,24 @@ export default function AdminLayout() {
       icon: ClipboardList,
       permission: 'VIEW_ORDERS', // ADMIN, MANAGER, CASHIER
     },
-    {
-      name: 'Reportes',
-      href: '/reports',
-      icon: BarChart3,
-      permission: 'VIEW_REPORTS', // ADMIN, MANAGER
-    },
-    {
-      name: 'SweetCoins',
-      href: '/sweetcoins',
-      icon: Coins,
-      permission: 'VIEW_SWEETCOINS', // ADMIN, MANAGER, CUSTOMER
-    },
-    {
-      name: 'Atención al Cliente',
-      href: '/dashboard/atencion-cliente',
-      icon: MessageSquare,
-      permission: 'VIEW_REPORTS', // ADMIN, MANAGER
-    },
+            {
+              name: 'Reportes',
+              href: '/reports',
+              icon: BarChart3,
+              permission: 'VIEW_REPORTS', // ADMIN, MANAGER
+            },
+            {
+              name: 'Gestión CriptoTrufas',
+              href: '/dashboard/criptotrufas',
+              icon: Coins,
+              permission: 'VIEW_REPORTS', // ADMIN, MANAGER
+            },
+            {
+              name: 'Atención al Cliente',
+              href: '/dashboard/atencion-cliente',
+              icon: MessageSquare,
+              permission: 'VIEW_REPORTS', // ADMIN, MANAGER
+            },
   ]
 
   // Filtrar ítems de navegación según el rol del usuario actual

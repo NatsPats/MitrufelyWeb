@@ -4,7 +4,7 @@
  * Estructura:
  *   - PublicHeader + PublicNav + PublicFooter (layout compartido)
  *   - Hero: saldo actual en grande + historial
- *   - Mis Cupones: carrusel horizontal de CouponCard
+ *   - Mis Cupones: carrusel horizontal fluido (track continuo)
  *   - Layout 2 columnas: Zona de Recompensas (izq) + Arcade Ruleta (der)
  *
  * Integraciones:
@@ -61,39 +61,73 @@ export default function PointsView() {
   const cuponesMaestro  = useCriptoTrufaStore((s) => s.cuponesMaestro)
   const historial       = useCriptoTrufaStore((s) => s.historialMovimientos)
   const canjearCupon    = useCriptoTrufaStore((s) => s.canjearCupon)
+  const hydrateSweetCoins = useCriptoTrufaStore((s) => s.hydrateSweetCoins)
 
   // UI local
   const [searchQuery,   setSearchQuery]  = useState('')
   const [userMenuOpen,  setUserMenuOpen] = useState(false)
   const [carouselIdx,   setCarouselIdx]  = useState(0)
   const [historialOpen, setHistorialOpen] = useState(false)
+  
+  // Estado responsivo para el carrusel
+  const [visibleCount, setVisibleCount] = useState(3)
 
-  // Fondo claro
+  // Fondo claro y carga inicial
   useEffect(() => {
     const prev = document.body.style.backgroundColor
     document.body.style.backgroundColor = '#faf8f5'
+    if (isAuthenticated) {
+      hydrateSweetCoins()
+    }
     return () => { document.body.style.backgroundColor = prev }
+  }, [isAuthenticated, hydrateSweetCoins])
+
+  // Efecto para determinar cuántos cupones mostrar según el ancho de pantalla
+  useEffect(() => {
+    const updateVisibleCount = () => {
+      if (window.innerWidth < 640) setVisibleCount(1)
+      else if (window.innerWidth < 1024) setVisibleCount(2)
+      else setVisibleCount(3)
+    }
+    
+    updateVisibleCount()
+    window.addEventListener('resize', updateVisibleCount)
+    return () => window.removeEventListener('resize', updateVisibleCount)
   }, [])
 
   const handleSearch = (e: React.FormEvent) => { e.preventDefault() }
   const handleLogout = () => { logout(); setUserMenuOpen(false); toast.success('Sesión cerrada.') }
 
   // Canje con feedback
-  const handleCanjear = (id_cupon: number) => {
-    const result = canjearCupon(id_cupon)
-    if (result.success) {
-      toast.success(result.message)
-    } else {
-      toast.error(result.message)
+  const handleCanjear = async (id_cupon: number) => {
+    try {
+      const result = await canjearCupon(id_cupon)
+      if (result.success) {
+        toast.success(result.message)
+      } else {
+        toast.error(result.message)
+      }
+    } catch (error) {
+      toast.error('Ocurrió un error inesperado al canjear el cupón.')
     }
   }
 
-  // Carrusel de cupones
-  const VISIBLE = 3
-  const maxIdx  = Math.max(0, cuponesCliente.length - VISIBLE)
+  // Lógica del carrusel fluido
+  const maxIdx  = Math.max(0, cuponesCliente.length - visibleCount)
   const canPrev = carouselIdx > 0
   const canNext = carouselIdx < maxIdx
-  const visibleCupones = cuponesCliente.slice(carouselIdx, carouselIdx + VISIBLE)
+
+  // Si el índice supera el máximo (ej: cambia el tamaño de la pantalla o se elimina un cupón), reseteamos
+  useEffect(() => {
+    if (carouselIdx > maxIdx) {
+      setCarouselIdx(maxIdx)
+    }
+  }, [maxIdx, carouselIdx])
+
+  // Calculo dinámico para el desplazamiento de la pista (track) del carrusel
+  const gapSize = 16 // 1rem = 16px (gap-4)
+  const itemWidth = `calc((100% - ${(visibleCount - 1) * gapSize}px) / ${visibleCount})`
+  const trackX = `calc(-${carouselIdx} * (100% + ${gapSize}px) / ${visibleCount})`
 
   return (
     <div className="min-h-screen bg-[#faf8f5] text-[#2a1115] font-sans antialiased">
@@ -244,7 +278,7 @@ export default function PointsView() {
         </section>
 
         {/* ══════════════════════════════════════════════════════════════════════
-            MIS CUPONES DISPONIBLES
+            MIS CUPONES DISPONIBLES (Carrusel fluido tipo pista/track)
         ══════════════════════════════════════════════════════════════════════ */}
         <section>
           <div className="flex items-center justify-between mb-5">
@@ -289,12 +323,22 @@ export default function PointsView() {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              <AnimatePresence mode="popLayout">
-                {visibleCupones.map((c, i) => (
-                  <CouponCard key={c.id_cupon_cliente} coupon={c} index={i} />
+            <div className=" overflow-hidden">
+              <motion.div
+                className="flex gap-4"
+                animate={{ x: trackX }}
+                transition={{ type: 'spring', stiffness: 200, damping: 28, mass: 0.8 }}
+              >
+                {cuponesCliente.map((c, i) => (
+                  <div
+                    key={c.id_cupon_cliente}
+                    className="shrink-0"
+                    style={{ width: itemWidth }}
+                  >
+                    <CouponCard coupon={c} index={i} />
+                  </div>
                 ))}
-              </AnimatePresence>
+              </motion.div>
             </div>
           )}
         </section>

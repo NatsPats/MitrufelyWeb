@@ -12,7 +12,7 @@ graph TD
     F2 -->|✅ Completado| F3[Fase 3: Inventario & Control FEFO]
     F3 -->|✅ Completado| F4[Fase 4: Carrito & Checkout Transaccional]
     F4 -->|✅ Completado| F5[Fase 5: Sistema de Pedidos y E-Commerce Extendido]
-    F5 --> F6[Fase 6: Recompensas CriptoTrufas]
+    F5 -->|✅ Completado| F6[Fase 6: Recompensas CriptoTrufas]
     F6 --> F7[Fase 7: Dashboard, Reportes PDF/Excel]
     F7 --> F8[Fase 8: Pruebas, Optimización & Despliegue]
 ```
@@ -69,8 +69,9 @@ graph TD
   * Panel de métricas e ingresos integrados y dashboard en vivo con conteo por estados, ranking de productos y tendencias en los últimos 30 días.
   * Tabla de `notifications` integradas para informar al cliente de sus cambios de estado y resolver los reportes (polling nativo).
 
-### 🔹 Fase 6: Sistema de Fidelización CriptoTrufas y Cuponería
+### 🔹 Fase 6: Sistema de Fidelización CriptoTrufas y Cuponería ✅ IMPLEMENTADO
 * **Objetivo:** Gamificar la pastelería mediante la moneda interna virtual del proyecto (CriptoTrufas), otorgando puntos por compras e incentivando canjes por cupones de descuento.
+* Ver detalle completo en [fase6_criptotrufas_cuponeria.md](./fase6_criptotrufas_cuponeria.md).
 * **Backend (`FastAPI`):**
   * Lógica de acumulación de puntos (por ejemplo, 10% del monto total de la venta en CriptoTrufas).
   * Endpoints para canjear saldo de puntos por cupones (con expiración, montos mínimos de compra, estado disponible/usado).

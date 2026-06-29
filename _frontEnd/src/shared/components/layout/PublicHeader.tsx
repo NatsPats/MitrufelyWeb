@@ -12,6 +12,7 @@ import { Link, useNavigate } from 'react-router'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import { useAuthStore } from '@/app/store'
+import { useCriptoTrufaStore } from '@/stores/criptotrufa.store'
 import { useState, useEffect, useRef } from 'react'
 import { PublicNav } from './PublicNav'
 import { NotificationBell } from '@/features/notifications/components/NotificationBell'
@@ -55,6 +56,17 @@ export function PublicHeader({
   const navigate = useNavigate()
   const isAuthenticated = userName !== null
   const { user } = useAuthStore()
+
+  const saldoActual = useCriptoTrufaStore((s) => s.saldoActual)
+  const hydrateSweetCoins = useCriptoTrufaStore((s) => s.hydrateSweetCoins)
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      hydrateSweetCoins()
+    }
+    // Access coinsBalance to satisfy TS compiler unused check
+    void coinsBalance
+  }, [isAuthenticated, hydrateSweetCoins, coinsBalance])
 
   // ── Auto-hide al scroll ───────────────────────────────────────────────
   const [visible, setVisible] = useState(true)
@@ -157,12 +169,17 @@ export function PublicHeader({
         <div className="flex items-center gap-3 md:gap-4">
 
           {/* CriptoTrufas balance */}
-          <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 select-none">
-            <Star className="h-4 w-4 fill-[#ff7a45] text-[#ff7a45]" />
-            <span className="text-sm font-black text-white">
-              {coinsBalance !== null ? coinsBalance.toLocaleString() : '2000'}
-            </span>
-          </div>
+          {isAuthenticated && (
+            <Link
+              to="/puntos"
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 select-none hover:bg-white/20 transition-all cursor-pointer no-underline text-inherit"
+            >
+              <Star className="h-4 w-4 fill-[#ff7a45] text-[#ff7a45]" />
+              <span className="text-sm font-black text-white">
+                {saldoActual.toLocaleString()} pts
+              </span>
+            </Link>
+          )}
 
           {/* Notificaciones (M14) */}
           {isAuthenticated && (
