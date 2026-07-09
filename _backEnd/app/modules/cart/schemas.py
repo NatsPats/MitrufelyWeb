@@ -33,6 +33,7 @@ class CartItemResponse(BaseModel):
     es_paquete: bool = False
     id_paquete: Optional[int] = None
     id_categoria: Optional[int] = None
+    stock_actual: Optional[int] = None
     productos: Optional[List[PackageComponentResponse]] = None
 
 

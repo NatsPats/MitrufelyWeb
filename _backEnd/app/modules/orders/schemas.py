@@ -186,6 +186,9 @@ class VentaResponse(BaseModel):
     """Respuesta estándar de una venta. Compatible con v1 + campos M14."""
     id_venta: Optional[int] = None
     id_cliente: int
+    cliente_nombre: Optional[str] = None
+    id_cupon_cliente: Optional[int] = None
+    cupon_codigo: Optional[str] = None
     estado: str
     estado_pago: str
     total: Decimal
@@ -229,6 +232,20 @@ class VentaResponse(BaseModel):
         if isinstance(data, dict):
             if "order_review" in data:
                 data["has_review"] = data["order_review"] is not None
+            if "cliente" in data and data["cliente"]:
+                c = data["cliente"]
+                if hasattr(c, "usuario") and c.usuario:
+                    data["cliente_nombre"] = f"{c.usuario.nombres} {c.usuario.apellidos}"
+                elif isinstance(c, dict) and "usuario" in c:
+                    u = c["usuario"]
+                    if isinstance(u, dict):
+                        data["cliente_nombre"] = f"{u.get('nombres', '')} {u.get('apellidos', '')}"
+            if "cupon_cliente" in data and data["cupon_cliente"]:
+                cc = data["cupon_cliente"]
+                if hasattr(cc, "codigo_unico"):
+                    data["cupon_codigo"] = cc.codigo_unico
+                elif isinstance(cc, dict):
+                    data["cupon_codigo"] = cc.get("codigo_unico")
             return data
 
         # Evitar lazy loading en contexto asíncrono para objetos reales de SQLAlchemy
@@ -253,6 +270,18 @@ class VentaResponse(BaseModel):
                         loaded_dict["has_review"] = getattr(data, "order_review", None) is not None
                     else:
                         loaded_dict["has_review"] = False
+
+                    # Establecer cliente_nombre si cliente está cargado
+                    if "cliente" not in insp.unloaded and getattr(data, "cliente", None):
+                        c = data.cliente
+                        if c and "usuario" not in inspect(c).unloaded and getattr(c, "usuario", None):
+                            loaded_dict["cliente_nombre"] = f"{c.usuario.nombres} {c.usuario.apellidos}"
+                    
+                    # Establecer cupon_codigo si cupon_cliente está cargado
+                    if "cupon_cliente" not in insp.unloaded and getattr(data, "cupon_cliente", None):
+                        cc = data.cupon_cliente
+                        if cc and "codigo_unico" not in inspect(cc).unloaded:
+                            loaded_dict["cupon_codigo"] = cc.codigo_unico
                     
                     return loaded_dict
             except Exception:
@@ -261,6 +290,20 @@ class VentaResponse(BaseModel):
         if hasattr(data, "order_review"):
             try:
                 object.__setattr__(data, "has_review", data.order_review is not None)
+            except Exception:
+                pass
+        if hasattr(data, "cliente") and getattr(data, "cliente", None):
+            try:
+                c = data.cliente
+                if getattr(c, "usuario", None):
+                    object.__setattr__(data, "cliente_nombre", f"{c.usuario.nombres} {c.usuario.apellidos}")
+            except Exception:
+                pass
+        if hasattr(data, "cupon_cliente") and getattr(data, "cupon_cliente", None):
+            try:
+                cc = data.cupon_cliente
+                if cc:
+                    object.__setattr__(data, "cupon_codigo", cc.codigo_unico)
             except Exception:
                 pass
         return data

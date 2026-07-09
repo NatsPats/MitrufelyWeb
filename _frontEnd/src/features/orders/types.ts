@@ -93,6 +93,9 @@ export interface OrderRefundResponse {
 export interface VentaResponse {
   id_venta: number
   id_cliente: number
+  cliente_nombre?: string | null
+  id_cupon_cliente?: number | null
+  cupon_codigo?: string | null
   estado: EstadoVenta
   estado_pago: 'PENDIENTE' | 'PAGADO'
   total: number

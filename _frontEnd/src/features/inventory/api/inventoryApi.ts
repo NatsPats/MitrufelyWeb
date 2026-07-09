@@ -82,4 +82,12 @@ export const inventoryApi = {
     const { data } = await api.get<ReconciliationItem[]>('/inventory/reconciliation', { params })
     return data
   },
+
+  /**
+   * Ejecuta el autoajuste de conciliación basándose únicamente en los lotes activos como fuente de verdad
+   */
+  autoAdjustInventory: async (): Promise<{ success: boolean; message: string; adjusted_products: any[] }> => {
+    const { data } = await api.post('/inventory/reconciliation/auto-adjust')
+    return data
+  },
 }

@@ -23,32 +23,27 @@ CartServiceDep = Annotated[CartService, Depends(get_cart_service)]
 logger = structlog.get_logger(__name__)
 
 
-@router.get(
-    "",
-    response_model=CartResponse,
-    status_code=status.HTTP_200_OK,
-    summary="Obtener carrito del usuario",
-)
-async def get_cart(
-    current_user: AuthUser,
-    service: CartServiceDep,
-    session: Annotated[AsyncSession, Depends(get_db_session)],
+async def _decorate_cart(
+    cart: CartResponse,
+    session: AsyncSession,
+    service: CartService,
+    user_id: int,
 ) -> CartResponse:
-    cart = await service.get_cart(user_id=current_user.user_id)
     modified = False
-
     for item in cart.items:
-        if not item.es_paquete and item.id_categoria is None:
-            # Obtener categoría de la base de datos para productos individuales
-            stmt = select(Producto.id_categoria).where(Producto.id_producto == item.id_producto)
+        if not item.es_paquete:
+            # Obtener categoría y stock actual en tiempo real para productos individuales
+            stmt = select(Producto.stock_actual, Producto.id_categoria).where(
+                Producto.id_producto == item.id_producto
+            )
             res = await session.execute(stmt)
-            cat_id = res.scalar_one_or_none()
-            if cat_id is not None:
-                item.id_categoria = cat_id
+            prod_data = res.fetchone()
+            if prod_data:
+                item.stock_actual = prod_data[0]
+                item.id_categoria = prod_data[1]
                 modified = True
-
-        elif item.es_paquete and (not item.productos or len(item.productos) == 0):
-            # Obtener componentes del paquete de la base de datos
+        else:
+            # Obtener componentes del paquete de la base de datos y calcular stock del paquete
             from app.infrastructure.database.models.catalogo import Paquete, PaqueteProducto
             from sqlalchemy.orm import selectinload
             stmt = (
@@ -59,6 +54,15 @@ async def get_cart(
             res = await session.execute(stmt)
             paquete = res.scalar_one_or_none()
             if paquete:
+                # El stock disponible del paquete es la capacidad mínima de sus componentes
+                min_pack_stock = None
+                for pp in paquete.productos:
+                    if pp.producto.estado:
+                        pack_stock = pp.producto.stock_actual // pp.cantidad
+                        if min_pack_stock is None or pack_stock < min_pack_stock:
+                            min_pack_stock = pack_stock
+                item.stock_actual = min_pack_stock if min_pack_stock is not None else 0
+
                 item.productos = [
                     PackageComponentResponse(
                         id_producto=pp.producto.id_producto,
@@ -73,9 +77,24 @@ async def get_cart(
 
     if modified:
         # Actualizar la caché de Redis
-        await service._persist(user_id=current_user.user_id, cart=cart)
+        await service._persist(user_id=user_id, cart=cart)
 
     return cart
+
+
+@router.get(
+    "",
+    response_model=CartResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Obtener carrito del usuario",
+)
+async def get_cart(
+    current_user: AuthUser,
+    service: CartServiceDep,
+    session: Annotated[AsyncSession, Depends(get_db_session)],
+) -> CartResponse:
+    cart = await service.get_cart(user_id=current_user.user_id)
+    return await _decorate_cart(cart, session, service, current_user.user_id)
 
 
 @router.post(
@@ -122,7 +141,7 @@ async def add_item(
             )
             for pp in paquete.productos if pp.producto.estado
         ]
-        return await service.add_item(
+        cart = await service.add_item(
             user_id=current_user.user_id,
             nombre=paquete.nombre,
             precio_unitario=precio_estimado,
@@ -130,6 +149,7 @@ async def add_item(
             imagen_url=paquete.imagen_url,
             productos=componentes,
         )
+        return await _decorate_cart(cart, session, service, current_user.user_id)
 
     stmt = select(Producto).where(
         Producto.id_producto == payload.id_producto,
@@ -143,7 +163,7 @@ async def add_item(
             detail=f"Producto con ID {payload.id_producto} no encontrado.",
         )
 
-    return await service.add_item(
+    cart = await service.add_item(
         user_id=current_user.user_id,
         nombre=producto.nombre,
         precio_unitario=producto.precio,
@@ -151,6 +171,7 @@ async def add_item(
         imagen_url=producto.imagen_url,
         id_categoria=producto.id_categoria,
     )
+    return await _decorate_cart(cart, session, service, current_user.user_id)
 
 
 @router.put(
@@ -164,13 +185,15 @@ async def update_item(
     payload: UpdateCartItemRequest,
     current_user: AuthUser,
     service: CartServiceDep,
+    session: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> CartResponse:
     try:
-        return await service.update_item(
+        cart = await service.update_item(
             user_id=current_user.user_id,
             id_producto=id_producto,
             payload=payload,
         )
+        return await _decorate_cart(cart, session, service, current_user.user_id)
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -188,11 +211,13 @@ async def remove_item(
     id_producto: int,
     current_user: AuthUser,
     service: CartServiceDep,
+    session: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> CartResponse:
-    return await service.remove_item(
+    cart = await service.remove_item(
         user_id=current_user.user_id,
         id_producto=id_producto,
     )
+    return await _decorate_cart(cart, session, service, current_user.user_id)
 
 
 @router.delete(

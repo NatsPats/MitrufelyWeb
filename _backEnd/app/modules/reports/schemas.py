@@ -37,6 +37,9 @@ class ReporteVentasItem(BaseModel):
     igv: Decimal
     total: Decimal
     metodo_pago: Optional[str] = None
+    monto_descuento_cupon: Optional[Decimal] = None
+    id_cupon_cliente: Optional[int] = None
+    cupon_codigo: Optional[str] = None
 
 
 class ReporteVentasResponse(BaseModel):

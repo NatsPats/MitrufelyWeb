@@ -37,6 +37,11 @@ export default function AdminIssuesPage() {
       return
     }
 
+    if (newStatus === 'RESUELTA' && resolutionType === 'REEMBOLSO' && montoReembolso <= 0) {
+      toast.error('El monto a reembolsar debe ser mayor que 0.')
+      return
+    }
+
     try {
       const payload: UpdateIssueRequest = { status: newStatus }
       if (resolutionText) payload.resolution = resolutionText
@@ -49,7 +54,13 @@ export default function AdminIssuesPage() {
       toast.success('Incidencia actualizada correctamente')
       setSelectedIssue(null)
     } catch (error: any) {
-      toast.error(error?.response?.data?.detail || 'Error al actualizar la incidencia')
+      const customMsg = error?.response?.data?.error?.message
+      const detail = error?.response?.data?.detail
+      let msg = 'Error al actualizar la incidencia'
+      if (customMsg) msg = customMsg
+      else if (Array.isArray(detail)) msg = detail.map((err: any) => err.msg || err).join(', ')
+      else if (typeof detail === 'string') msg = detail
+      toast.error(msg)
     }
   }
 
@@ -275,7 +286,8 @@ export default function AdminIssuesPage() {
                     <select
                       value={newStatus}
                       onChange={(e) => setNewStatus(e.target.value)}
-                      className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-[#5c0f1b]/20 outline-none"
+                      disabled={updating}
+                      className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 font-bold text-stone-700 focus:ring-2 focus:ring-[#5c0f1b]/20 outline-none disabled:opacity-50"
                     >
                       <option value="ABIERTA">Abierta</option>
                       <option value="EN_REVISION">En Revisión (Investigando)</option>
@@ -291,11 +303,16 @@ export default function AdminIssuesPage() {
                         <select
                           value={resolutionType}
                           onChange={(e) => setResolutionType(e.target.value)}
-                          className="w-full bg-white border border-yellow-200 rounded-xl px-4 py-2 font-bold text-stone-700 focus:ring-2 focus:ring-yellow-400 outline-none"
+                          disabled={updating}
+                          className="w-full bg-white border border-yellow-200 rounded-xl px-4 py-2 font-bold text-stone-700 focus:ring-2 focus:ring-yellow-400 outline-none disabled:opacity-50"
                         >
                           <option value="SOLO_INFO">Solo Informativo (Sin Acción)</option>
-                          <option value="DEVOLUCION">Devolución de Stock (Cancela Pedido)</option>
-                          <option value="REEMBOLSO">Reembolso de Dinero</option>
+                          {(selectedIssue.estado_pedido === 'EN_CAMINO' || selectedIssue.estado_pedido === 'ENTREGADO') && (
+                            <option value="DEVOLUCION">Devolución de Stock (Cancela Pedido)</option>
+                          )}
+                          {(selectedIssue.estado_pedido === 'ENTREGADO' || selectedIssue.estado_pedido === 'CANCELADO' || selectedIssue.estado_pedido === 'DEVUELTO') && (
+                            <option value="REEMBOLSO">Reembolso de Dinero</option>
+                          )}
                         </select>
                       </div>
 
@@ -308,7 +325,8 @@ export default function AdminIssuesPage() {
                             min="0"
                             value={montoReembolso}
                             onChange={(e) => setMontoReembolso(parseFloat(e.target.value) || 0)}
-                            className="w-full bg-white border border-yellow-200 rounded-xl px-4 py-2 font-bold text-stone-700 focus:ring-2 focus:ring-yellow-400 outline-none"
+                            disabled={updating}
+                            className="w-full bg-white border border-yellow-200 rounded-xl px-4 py-2 font-bold text-stone-700 focus:ring-2 focus:ring-yellow-400 outline-none disabled:opacity-50"
                           />
                         </div>
                       )}
@@ -320,8 +338,9 @@ export default function AdminIssuesPage() {
                     <textarea
                       value={resolutionText}
                       onChange={(e) => setResolutionText(e.target.value)}
+                      disabled={updating}
                       placeholder="Escribe aquí las acciones que se tomaron para resolver este problema..."
-                      className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 text-sm text-stone-700 focus:ring-2 focus:ring-[#5c0f1b]/20 outline-none min-h-[120px] resize-none"
+                      className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 text-sm text-stone-700 focus:ring-2 focus:ring-[#5c0f1b]/20 outline-none min-h-[120px] resize-none disabled:opacity-50"
                     />
                     <p className="text-xs text-stone-400 font-medium">Requerido si se marca como Resuelta o Cerrada.</p>
                   </div>
@@ -332,7 +351,8 @@ export default function AdminIssuesPage() {
               <div className="p-4 border-t border-stone-100 bg-stone-50 flex justify-end gap-3">
                 <button
                   onClick={() => setSelectedIssue(null)}
-                  className="px-6 py-2.5 rounded-full bg-stone-200 text-stone-700 font-bold hover:bg-stone-300 transition-colors"
+                  disabled={updating}
+                  className="px-6 py-2.5 rounded-full bg-stone-200 text-stone-700 font-bold hover:bg-stone-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Cancelar
                 </button>

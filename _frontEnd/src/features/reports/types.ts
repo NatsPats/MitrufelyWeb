@@ -32,6 +32,9 @@ export interface ReporteVentasItem {
   igv: string
   total: string
   metodo_pago: string | null
+  monto_descuento_cupon?: string | null
+  id_cupon_cliente?: number | null
+  cupon_codigo?: string | null
 }
 
 export interface ReporteVentasResponse {

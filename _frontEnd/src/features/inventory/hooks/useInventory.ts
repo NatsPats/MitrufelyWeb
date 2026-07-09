@@ -86,3 +86,22 @@ export const useAdjustStockMutation = () => {
     },
   })
 }
+
+export const useAutoAdjustInventoryMutation = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: () => inventoryApi.autoAdjustInventory(),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['inventory-lots'] })
+      queryClient.invalidateQueries({ queryKey: ['inventory-kardex'] })
+      queryClient.invalidateQueries({ queryKey: ['inventory-reconciliation'] })
+      queryClient.invalidateQueries({ queryKey: ['admin-products'] })
+      queryClient.invalidateQueries({ queryKey: ['products'] })
+      toast.success(data.message || 'Autoajuste de inventario completado con éxito ✨')
+    },
+    onError: (error: any) => {
+      const detail = formatErrorDetail(error, 'Error al ejecutar el autoajuste.')
+      toast.error(`Error: ${detail}`, { duration: 6000 })
+    },
+  })
+}

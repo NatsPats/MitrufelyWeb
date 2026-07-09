@@ -226,7 +226,7 @@ def generar_comprobante_pdf(data: dict) -> bytes:
     descuento = _get_decimal(venta, "monto_descuento_cupon")
     base = _get_decimal(venta, "base_imponible")
     igv = _get_decimal(venta, "igv")
-    total = _get_decimal(venta, "total_final") or _get_decimal(venta, "total")
+    total = _get_decimal(venta, "total") + _get_decimal(venta, "igv")
 
     totales = Table(
         [

@@ -112,6 +112,16 @@ def make_venta_mock(
     venta.paquetes_vendidos = []
     venta.metodos_pago = []
     venta.documentos = []
+    # Atributos opcionales leídos por VentaResponse.model_validate (deben ser None, no MagicMock).
+    # Es clave setear cupon_cliente=None para que el model_validator no intente leer codigo_unico de un mock.
+    venta.cupon_cliente = None
+    venta.cupon_codigo = None
+    venta.delivery_eta = None
+    venta.delivery_completed_at = None
+    venta.refund_date = None
+    venta.refund_amount = None
+    venta.order_refund = None
+    venta.order_events = []
     return venta
 
 
@@ -712,6 +722,12 @@ class TestVentaServiceCancelar:
         cliente_mock.id_cliente = id_cliente
         cliente_mock.id_usuario = id_usuario_cliente
         venta.cliente = cliente_mock
+        # Atributos leídos por VentaResponse.model_validate que deben ser tipos concretos
+        venta.cupon_codigo = None
+        venta.delivery_eta = None
+        venta.delivery_completed_at = None
+        venta.refund_date = None
+        venta.order_refund = None
         return venta
 
     async def test_cancelar_estado_no_cancelable_lanza_business_error(

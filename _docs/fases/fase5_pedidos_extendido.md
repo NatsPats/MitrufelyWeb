@@ -73,3 +73,60 @@ Durante la integración de la Fase 6 se detectaron y corrigieron varios detalles
 - **Validación de transiciones (frontend):** el flujo de FSM refleja de forma reactiva los estados del backend con feedback inmediato (toasts) en cada éxito o error.
 
 Estos cambios no alteran el contrato de la Fase 5; refuerzan su robustez operativa.
+
+## 8. Mejoras Introducidas en Julio 2026 (FSM robusta + seguridad + stock vencido)
+
+Tras la implementación inicial se detectaron varios problemas operativos que requirieron extender la FSM, añadir control de autorización y corregir el reintegro de stock. El detalle técnico completo está en [SKILL 15](../skills/15_ORDERS_FSM_AND_DELIVERY.md) y en la [Auditoría del Sistema](../AUDITORIA_SISTEMA_2026-07-08.md).
+
+### 8.1 FSM ampliada con escenarios de error
+
+La FSM original tenía una brecha crítica: un pedido `EN_CAMINO` **solo podía ir a `ENTREGADO`**. Si la entrega fallaba (cliente no ubicado, dirección errada, producto dañado en ruta), el pedido quedaba **atascado** sin transición válida.
+
+**Transiciones añadidas:**
+- `EN_CAMINO → DEVUELTO`: pedido en tránsito que retorna a tienda.
+- `ENTREGADO → REEMBOLSADO`: reembolso directo sin forzar pasar por `DEVUELTO`.
+
+Ver diagrama completo en [SKILL 15 §1](../skills/15_ORDERS_FSM_AND_DELIVERY.md). Nuevo helper `can_devolver(estado)` añadido.
+
+### 8.2 Bug bloqueante: cancelación desde el panel no funcionaba
+
+**Síntoma:** el admin intentaba cancelar un pedido desde `/orders` y la acción fallaba silenciosamente.
+
+**Causa raíz:** el modal de confirmación del frontend (`OrdersPage.tsx`) llamaba a la mutación **sin enviar el `motivo`** obligatorio que el backend exige (`CancelRequest.motivo`, mín. 5 caracteres). Resultado: HTTP 422 (validación de Pydantic) **antes** de que la FSM se evaluara.
+
+**Fix:** el modal ahora captura `motivo` (para cancelar/devolver) y `monto` (para reembolsar), valida cliente-side (mín. 5 caracteres) y construye el payload antes de enviar. Además, **ya no se cierra ante un error** — muestra el mensaje dentro del modal para permitir reintentar.
+
+### 8.3 Alineación UI ↔ FSM
+
+Los botones de acción del panel admin ahora reflejan exactamente las transiciones permitidas:
+- `CANCELADO`: disponible en `PENDIENTE`, `PAGADO` y `PREPARANDO` (antes solo en `PENDIENTE`).
+- `DEVOLVER`: disponible en `EN_CAMINO` (nuevo) y `ENTREGADO`.
+- `REEMBOLSAR`: disponible en `ENTREGADO`, `CANCELADO`, `DEVUELTO`; **removido de `PAGADO`** (no permitido por la FSM).
+- `CANCELADO`/`DEVUELTO`: muestran `REEMBOLSAR` como única acción.
+
+### 8.4 Verificación de titularidad (seguridad)
+
+**Brecha detectada:** los endpoints `PUT /ventas/{id}/cancelar` y `/devolver` usaban `AuthUser` (cualquier usuario autenticado) y **no verificaban titularidad**. Un cliente podía cancelar/devolver el pedido de otro pasando un `id_venta` ajeno.
+
+**Fix:** `VentaService._verificar_titularidad(venta, id_usuario, es_admin)` — si el usuario es cliente, valida que `venta.cliente.id_usuario == id_usuario`; si no coincide, lanza `ForbiddenError` (403). Los ADMIN tienen bypass. El flag `es_admin` se deriva de `current_user.is_admin()` en el router.
+
+### 8.5 Cancelación por el cliente
+
+Antes, **solo el admin** podía cancelar pedidos. Ahora el cliente puede cancelar sus propios pedidos desde `CustomerOrderDetailPage` cuando el estado es cancelable (`PENDIENTE`/`PAGADO`/`PREPARANDO`), con un modal de motivo. El backend valida la titularidad.
+
+### 8.6 Fix de regresión: resolución de incidencias
+
+La verificación de titularidad (§8.4) rompió el flujo de `IssueService.actualizar_incidencia`: al resolver una incidencia como devolución, llamaba a `venta_service.solicitar_devolucion` **sin** `es_admin=True`, por lo que el admin fallaba el chequeo de titularidad (`ForbiddenError`). Corregido: ahora pasa `es_admin=True`, coherente con que `/admin/incidencias/*` está protegido por `AdminUser`.
+
+### 8.7 Fix de stock negativo en devolución de lotes vencidos
+
+**Bug:** al devolver unidades de un lote vencido, `_devolver_stock` insertaba un `MovimientoStock(VENCIMIENTO)` que **restaba** del Kardex, pero esas unidades ya habían sido restadas por el movimiento `VENTA` original → **doble sustracción** → stock negativo y descuadre en la conciliación.
+
+**Fix:** la rama de lote vencido en `_devolver_stock` **ya no inserta ningún movimiento** en el Kardex. Las unidades se descartan sin afectar el balance contable. La trazabilidad se conserva vía `OrderEvent` ("N unidad(es) eliminada(s) por vencimiento") y log estructurado. Ver auditoría contable completa en [AUDITORIA §2.2](../AUDITORIA_SISTEMA_2026-07-08.md).
+
+### 8.8 Tests añadidos
+
+- `tests/unit/test_state_machine.py` (55 tests): transiciones válidas/inválidas, estados terminales, helpers.
+- Extensión de `tests/unit/test_venta_service.py` (`TestVentaServiceCancelar`): titularidad, admin cross-user, estado no cancelable, dueño exitoso.
+
+**Suite completa: 200 passed, 0 failed.**

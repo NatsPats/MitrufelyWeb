@@ -170,3 +170,20 @@ async def get_reconciliation(
     Un descuadre indica corrupción de datos o bypass de los triggers.
     """
     return await service.get_reconciliation(solo_descuadrados=solo_descuadrados)
+
+
+@router.post(
+    "/reconciliation/auto-adjust",
+    summary="Alinear inventario (autoajuste)",
+)
+async def auto_adjust_inventory(
+    service: InventoryServiceDep,
+    current_user: Annotated[object, Depends(require_permission(Permission.INVENTORY_WRITE))],
+) -> dict:
+    """
+    Corrige automáticamente las discrepancias de inventario para todos los
+    productos desalineados, utilizando como única fuente de verdad
+    los lotes activos (stock_calculado_lotes).
+    """
+    return await service.auto_adjust_inventory(id_usuario=current_user.user_id)
+

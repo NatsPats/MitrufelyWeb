@@ -43,6 +43,7 @@ class CartService:
                     es_paquete=item.get("es_paquete", False),
                     id_paquete=item.get("id_paquete"),
                     id_categoria=item.get("id_categoria"),
+                    stock_actual=item.get("stock_actual"),
                     productos=[
                         PackageComponentResponse(
                             id_producto=p["id_producto"],
@@ -96,6 +97,7 @@ class CartService:
                     es_paquete=item.es_paquete,
                     id_paquete=item.id_paquete,
                     id_categoria=id_categoria,
+                    stock_actual=None,
                     productos=productos,
                 )
             )

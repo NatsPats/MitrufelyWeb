@@ -6,37 +6,47 @@ Esta carpeta contiene toda la documentación técnica viva del proyecto Mytrufel
 
 ```
 _docs/
-├── README.md                    # Este archivo (guía de documentación)
-├── PRINCIPIOS_Y_PATRONES.md     # ← LEER ANTES DE SUSTENTAR (SOLID, MVC y Patrones)
-├── skills/                      # Skills de arquitectura/dominio para la IA
-│   ├── 00_INDEX.md              # ← Índice maestro de habilidades
-│   ├── 01_DB_SCHEMA.md
-│   ├── 02_BACKEND_ARCHITECTURE.md
-│   ├── 03_AUTH_SECURITY.md
-│   ├── 04_CHECKOUT_FLOW.md
-│   ├── 05_INVENTORY_STOCK.md
-│   ├── 06_CRIPTOTRUFA.md
-│   ├── 07_FRONTEND_ARCHITECTURE.md
-│   ├── 08_API_CONTRACTS.md
-│   ├── 09_BACKGROUND_TASKS.md
-│   └── 10_TESTING.md
-└── sql_modules/                 # ← NUEVO: BD factorizada en módulos + skills SQL
-    ├── 00_INDEX.md              # ← Índice maestro de módulos SQL
-    ├── SK-SQL-00_convenciones.md  # Skill SECUNDARIO (apoyo transversal)
-    ├── SK-SQL-01_enums_tipos.md   # Skill M01 — ENUMs
-    ├── SK-SQL-02_usuarios_roles.md # Skill M02 — Usuarios/Roles
-    ├── SK-SQL-03_catalogo_inventario.md # Skill M03 — Catálogo/Kardex
-    ├── SK-SQL-04_cupones.md       # Skill M04 — Cupones
-    ├── SK-SQL-05_ventas_pagos.md  # Skill M05 — Ventas/Pagos
-    ├── SK-SQL-06_recompensas_CriptoTrufas.md # Skill M06 — CriptoTrufas
-    ├── M01_enums_tipos.sql
-    ├── M02_usuarios_roles.sql
-    ├── M03_catalogo_inventario.sql
-    ├── M04_cupones.sql
-    ├── M05_ventas_pagos.sql
-    ├── M06_recompensas_CriptoTrufas.sql
-    └── M07_install_master.sql     # Orden de ejecución
+├── README.md                          # Este archivo (guía de documentación)
+├── PRINCIPIOS_Y_PATRONES.md           # ← LEER ANTES DE SUSTENTAR (SOLID, MVC y Patrones)
+├── ARQUITECTURA_Y_DESARROLLO.md       # Visión arquitectónica integral
+├── AUDITORIA_SISTEMA_2026-07-08.md    # ← Auditoría integral + cambios recientes + flujos críticos
+├── fases/                             # Documentación por fase de desarrollo
+│   ├── plan_fases.md                  # ← Mapa estratégico de las 8 fases
+│   ├── fase1_autenticacion.md
+│   ├── fase2_catalogo.md
+│   ├── fase3_inventario_fefo.md
+│   ├── fase4_checkout_ventas.md
+│   ├── fase5_pedidos_extendido.md     # FSM de pedidos + mejoras julio 2026
+│   ├── fase6_criptotrufas_cuponeria.md
+│   └── fase7_reportes_dashboard.md    # ← 7 reportes + comprobantes PDF/Excel
+├── skills/                            # Skills de arquitectura/dominio para la IA
+│   ├── 00_INDEX.md                    # ← Índice maestro de habilidades
+│   ├── 01_DB_SCHEMA.md ... 10_TESTING.md
+│   ├── 11_ANALYTICS_BI.md
+│   ├── 13_PRODUCTS_CATALOG_CRUD.md
+│   ├── 14_REACT_QUERY_LOADERS.md
+│   └── 15_ORDERS_FSM_AND_DELIVERY.md  # ← FSM ampliada + titularidad + stock vencido
+└── sql_modules/                       # BD factorizada en módulos + skills SQL
+    ├── 00_INDEX.md                    # ← Índice maestro de módulos SQL
+    └── (M01-M14, SK-SQL-00 a SK-SQL-06)
 ```
+
+---
+
+## 📋 Plan de Fases y Estado
+
+| Fase | Estado | Documentación |
+|---|---|---|
+| 1 — Autenticación & Seguridad | ✅ | [fase1](./fases/fase1_autenticacion.md) |
+| 2 — Catálogo & Categorías | ✅ | [fase2](./fases/fase2_catalogo.md) |
+| 3 — Inventario & Control FEFO | ✅ | [fase3](./fases/fase3_inventario_fefo.md) |
+| 4 — Carrito & Checkout Transaccional | ✅ | [fase4](./fases/fase4_checkout_ventas.md) |
+| 5 — Pedidos y E-Commerce Extendido | ✅ | [fase5](./fases/fase5_pedidos_extendido.md) |
+| 6 — Fidelización CriptoTrufas | ✅ | [fase6](./fases/fase6_criptotrufas_cuponeria.md) |
+| 7 — Reportes, Dashboard y Comprobantes | ✅ | [fase7](./fases/fase7_reportes_dashboard.md) |
+| 8 — Pruebas, Optimización & Despliegue | ⏳ Pendiente | — |
+
+Mapa estratégico completo en [plan_fases.md](./fases/plan_fases.md). Auditoría integral del estado actual del sistema en [AUDITORIA_SISTEMA_2026-07-08.md](./AUDITORIA_SISTEMA_2026-07-08.md).
 
 ---
 

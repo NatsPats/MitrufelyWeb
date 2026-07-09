@@ -135,9 +135,17 @@ export default function CartView() {
     toast.info('Cupón eliminado.')
   }
 
+  const hasStockIssues = items.some(
+    (item) => item.stock_actual !== undefined && item.stock_actual !== null && item.cantidad > item.stock_actual
+  )
+
   const handleContinue = () => {
     if (items.length === 0) {
       toast.error('Tu carrito está vacío.')
+      return
+    }
+    if (hasStockIssues) {
+      toast.error('Por favor, reduce las cantidades que superan el stock disponible antes de pagar.')
       return
     }
     setPaymentOpen(true)
@@ -259,6 +267,27 @@ export default function CartView() {
                           {item.es_paquete ? 'Paquete Especial' : 'Trufa Artesanal'}
                         </p>
 
+                        {/* Indicador de Stock */}
+                        <div className="flex items-center gap-1.5 mt-1 select-none">
+                          {item.stock_actual !== undefined && item.stock_actual !== null ? (
+                            item.stock_actual <= 0 ? (
+                              <span className="text-[10px] font-black text-red-600 bg-red-50 px-2 py-0.5 rounded-md flex items-center gap-1 border border-red-100 uppercase tracking-wider">
+                                <AlertTriangle className="h-3 w-3 shrink-0" />
+                                Sin stock disponible (Agotado)
+                              </span>
+                            ) : item.cantidad > item.stock_actual ? (
+                              <span className="text-[10px] font-black text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md flex items-center gap-1 border border-amber-100 uppercase tracking-wider">
+                                <AlertTriangle className="h-3 w-3 shrink-0" />
+                                Supera el stock disponible ({item.stock_actual} uds)
+                              </span>
+                            ) : (
+                              <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md flex items-center gap-1 border border-emerald-100 uppercase tracking-wider">
+                                Stock disponible: {item.stock_actual} uds
+                              </span>
+                            )
+                          ) : null}
+                        </div>
+
                         <div className="flex items-center gap-2 mt-2">
                           <button
                             onClick={() =>
@@ -273,10 +302,15 @@ export default function CartView() {
                             {item.cantidad}
                           </span>
                           <button
-                            onClick={() =>
+                            onClick={() => {
+                              if (item.stock_actual !== undefined && item.stock_actual !== null && item.cantidad >= item.stock_actual) {
+                                toast.warning(`Sólo hay ${item.stock_actual} unidades disponibles de este producto.`)
+                                return
+                              }
                               updateItem.mutate({ id_producto: item.id_producto, cantidad: item.cantidad + 1 })
-                            }
-                            className="h-6 w-6 rounded-full flex items-center justify-center border border-[#5c0f1b]/20 text-[#5c0f1b] hover:bg-[#5c0f1b]/8 transition-all active:scale-90 cursor-pointer"
+                            }}
+                            disabled={item.stock_actual !== undefined && item.stock_actual !== null && item.cantidad >= item.stock_actual}
+                            className="h-6 w-6 rounded-full flex items-center justify-center border border-[#5c0f1b]/20 text-[#5c0f1b] hover:bg-[#5c0f1b]/8 transition-all active:scale-90 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100"
                             aria-label="Agregar"
                           >
                             <Plus className="h-3 w-3" />
@@ -532,10 +566,17 @@ export default function CartView() {
                     </div>
                   )}
 
+                   {hasStockIssues && (
+                    <div className="bg-red-50 border border-red-200 text-red-700 text-xs font-bold p-3 rounded-xl flex items-start gap-2 mt-2">
+                      <AlertTriangle className="h-4 w-4 shrink-0 text-red-500" />
+                      <span>Algunos productos en tu carrito superan el stock disponible. Por favor ajusta las cantidades para continuar.</span>
+                    </div>
+                  )}
+
                   <button
                     onClick={handleContinue}
-                    disabled={shippingLoading}
-                    className="w-full flex items-center justify-center gap-2 py-4 rounded-full bg-[#5c0f1b] text-white font-black text-sm hover:bg-[#7a1525] transition-all active:scale-95 shadow-lg cursor-pointer border-none mt-2 disabled:opacity-50"
+                    disabled={shippingLoading || hasStockIssues}
+                    className="w-full flex items-center justify-center gap-2 py-4 rounded-full bg-[#5c0f1b] text-white font-black text-sm hover:bg-[#7a1525] transition-all active:scale-95 shadow-lg cursor-pointer border-none mt-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#5c0f1b]"
                   >
                     Continuar compra
                     <ArrowRight className="h-4 w-4" />

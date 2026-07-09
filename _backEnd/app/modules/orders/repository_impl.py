@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.infrastructure.database.models.ventas import Venta, DetalleVenta
+from app.infrastructure.database.models.usuarios import Cliente
 from app.modules.orders.repository import IVentaRepository
 
 
@@ -23,6 +24,8 @@ class VentaRepositoryImpl(IVentaRepository):
                 selectinload(Venta.metodos_pago),
                 selectinload(Venta.documentos),
                 selectinload(Venta.order_review),
+                selectinload(Venta.cliente).selectinload(Cliente.usuario),
+                selectinload(Venta.cupon_cliente),
             )
             .where(Venta.id_venta == pk)
         )
@@ -38,6 +41,8 @@ class VentaRepositoryImpl(IVentaRepository):
                 selectinload(Venta.metodos_pago),
                 selectinload(Venta.documentos),
                 selectinload(Venta.order_review),
+                selectinload(Venta.cliente).selectinload(Cliente.usuario),
+                selectinload(Venta.cupon_cliente),
             )
             .order_by(Venta.fecha_venta.desc())
             .limit(limit)
@@ -80,6 +85,8 @@ class VentaRepositoryImpl(IVentaRepository):
                 selectinload(Venta.metodos_pago),
                 selectinload(Venta.documentos),
                 selectinload(Venta.order_review),
+                selectinload(Venta.cliente).selectinload(Cliente.usuario),
+                selectinload(Venta.cupon_cliente),
             )
             .where(Venta.id_cliente == id_cliente)
             .order_by(Venta.fecha_venta.desc())

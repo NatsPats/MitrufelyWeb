@@ -9,7 +9,7 @@ import structlog
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import NotFoundError
+from app.core.exceptions import NotFoundError, BusinessRuleError
 from app.infrastructure.database.models.pedidos_ext import OrderIssue
 from app.infrastructure.database.models.usuarios import Cliente, Usuario
 from app.infrastructure.database.models.ventas import Venta
@@ -93,6 +93,8 @@ class IssueService:
             elif dto.resolution_type == TipoResolucionEnum.REEMBOLSO:
                 if self.venta_service:
                     monto = dto.monto_reembolso or 0.0
+                    if monto <= 0.0:
+                        raise BusinessRuleError("El monto a reembolsar debe ser mayor que 0.")
                     req = ReembolsoRequest(monto=monto, motivo=dto.resolution or "Resolución de incidencia")
                     await self.venta_service.procesar_reembolso(issue.id_venta, id_usuario, req)
                     

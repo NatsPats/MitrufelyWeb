@@ -783,71 +783,210 @@ function ReporteUsuariosTab() {
 // ── 6. Comprobantes Electrónicos ─────────────────────────────────────────────
 
 function ComprobantesTab() {
-  const [idVenta, setIdVenta] = useState('')
+  const hoy = new Date()
+  const haceUnMes = new Date(hoy.getFullYear(), hoy.getMonth() - 1, hoy.getDate())
+  const [desde, setDesde] = useState(haceUnMes.toISOString().split('T')[0])
+  const [hasta, setHasta] = useState(hoy.toISOString().split('T')[0])
+  const [search, setSearch] = useState('')
   const [descargando, setDescargando] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<number[]>([])
 
-  const handleDescargar = async () => {
-    const id = Number(idVenta)
-    if (!id || isNaN(id)) {
-      toast.warning('Ingrese un ID de venta válido.')
-      return
-    }
-    setDescargando(true)
+  const filtros: ReporteFiltros = useMemo(
+    () => ({
+      fecha_desde: desde || undefined,
+      fecha_hasta: hasta || undefined,
+    }),
+    [desde, hasta],
+  )
+
+  const { data, isLoading, isFetching, refetch } = useReporteQuery('ventas', filtros)
+
+  // Búsqueda en el cliente
+  const filteredItems = useMemo(() => {
+    if (!data?.items) return []
+    return data.items.filter((item) => {
+      const matchSearch =
+        !search ||
+        item.cliente.toLowerCase().includes(search.toLowerCase()) ||
+        item.id_venta.toString().includes(search)
+      return matchSearch
+    })
+  }, [data?.items, search])
+
+  const handleDescargar = async (id: number) => {
     try {
       const blob = await reportsApi.descargarComprobante(id)
       descargarBlob(blob, `comprobante_venta_${id}.pdf`)
-      toast.success('Comprobante descargado')
+      toast.success(`Comprobante #${id} descargado.`)
     } catch {
-      toast.error('No se pudo generar el comprobante. Verifique el ID de venta.')
+      toast.error(`No se pudo generar el comprobante #${id}.`)
+    }
+  }
+
+  const handleDescargarVarios = async () => {
+    if (selectedIds.length === 0) return
+    setDescargando(true)
+    try {
+      for (let i = 0; i < selectedIds.length; i++) {
+        const id = selectedIds[i]
+        if (id !== undefined) {
+          await handleDescargar(id)
+        }
+        if (i < selectedIds.length - 1) {
+          // Delay de 600ms para evitar bloqueos del navegador
+          await new Promise((resolve) => setTimeout(resolve, 600))
+        }
+      }
+      toast.success('Todos los comprobantes seleccionados han sido procesados.')
+      setSelectedIds([])
+    } catch {
+      toast.error('Ocurrió un error en la descarga masiva.')
     } finally {
       setDescargando(false)
     }
   }
 
+  const toggleSelectAll = () => {
+    if (selectedIds.length === filteredItems.length) {
+      setSelectedIds([])
+    } else {
+      setSelectedIds(filteredItems.map((item) => item.id_venta))
+    }
+  }
+
+  const toggleSelect = (id: number) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    )
+  }
+
   return (
     <div className="space-y-5">
-      <div className="bg-white rounded-2xl border border-[#5c0f1b]/8 p-6 shadow-sm">
-        <div className="flex items-start gap-4">
-          <div className="h-12 w-12 rounded-2xl bg-[#5c0f1b]/8 flex items-center justify-center shrink-0">
-            <Receipt className="h-6 w-6 text-[#5c0f1b]" />
+      {/* Filtros de búsqueda e intervalo de fechas */}
+      <div className="bg-white p-5 rounded-2xl border border-[#5c0f1b]/10 shadow-sm space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3 flex-1 min-w-[280px]">
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar por cliente o ID de pedido..."
+              className="px-4 py-2.5 rounded-xl border border-stone-200 bg-[#faf8f5] text-sm font-semibold text-[#2a1115] outline-none flex-1 focus:ring-2 focus:ring-[#5c0f1b]/20 focus:border-[#5c0f1b]"
+            />
           </div>
-          <div className="flex-1">
-            <h3 className="font-black text-[#2a1115]">Generar comprobante por venta</h3>
-            <p className="text-sm text-stone-500 font-medium mt-1 mb-4">
-              Ingresa el ID de una venta para generar su comprobante electrónico en PDF. El documento
-              incluye los datos del cliente, los productos adquiridos, las cantidades y el total pagado.
-            </p>
-            <div className="flex flex-wrap items-center gap-3">
-              <input
-                type="number"
-                value={idVenta}
-                onChange={(e) => setIdVenta(e.target.value)}
-                placeholder="ID de venta (ej: 12)"
-                className="px-4 py-2.5 rounded-xl border border-stone-200 bg-[#faf8f5] text-sm font-semibold text-[#2a1115] outline-none w-48"
-              />
-              <button
-                onClick={handleDescargar}
-                disabled={descargando || !idVenta}
-                className="inline-flex items-center gap-2 bg-[#5c0f1b] hover:bg-[#7a1525] text-white text-sm font-bold px-5 py-2.5 rounded-xl transition active:scale-95 cursor-pointer disabled:opacity-50"
-              >
-                {descargando ? (
-                  <RefreshCw className="h-4 w-4 animate-spin" />
-                ) : (
-                  <FileText className="h-4 w-4" />
-                )}
-                Generar PDF
-              </button>
-            </div>
+          <FiltrosFechas desde={desde} hasta={hasta} onDesde={setDesde} onHasta={setHasta} />
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => refetch()}
+              className="p-2.5 rounded-xl border border-stone-200 bg-[#faf8f5] hover:bg-[#5c0f1b]/5 cursor-pointer transition active:scale-95"
+              title="Refrescar"
+            >
+              <RefreshCw className={cn('h-4 w-4 text-[#5c0f1b]', isFetching && 'animate-spin')} />
+            </button>
+            <button
+              onClick={handleDescargarVarios}
+              disabled={descargando || selectedIds.length === 0}
+              className="inline-flex items-center gap-2 bg-[#5c0f1b] hover:bg-[#7a1525] text-white text-sm font-bold px-4 py-2.5 rounded-xl transition active:scale-95 cursor-pointer disabled:opacity-50 shadow-sm"
+            >
+              {descargando ? (
+                <RefreshCw className="h-4 w-4 animate-spin" />
+              ) : (
+                <FileText className="h-4 w-4" />
+              )}
+              Generar PDF ({selectedIds.length})
+            </button>
           </div>
         </div>
       </div>
 
-      <div className="bg-[#fff7ed] border border-[#ff7a45]/20 rounded-2xl p-5">
-        <p className="text-sm text-[#7a1525] font-semibold">
-          💡 Los clientes también pueden descargar su comprobante directamente desde el detalle de su
-          pedido en <span className="font-black">Mi Cuenta → Pedidos</span>.
-        </p>
-      </div>
+      {isLoading ? (
+        <Cargando />
+      ) : !filteredItems.length ? (
+        <Vacio mensaje="No se encontraron comprobantes para los filtros ingresados." />
+      ) : (
+        <div className="overflow-x-auto rounded-2xl border border-stone-100 bg-white shadow-sm">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-stone-50 text-[#5c0f1b]/70 font-bold uppercase tracking-wider text-[11px] border-b border-stone-100">
+                <th className="px-4 py-3 text-left w-10">
+                  <input
+                    type="checkbox"
+                    checked={filteredItems.length > 0 && selectedIds.length === filteredItems.length}
+                    onChange={toggleSelectAll}
+                    className="rounded text-[#5c0f1b] focus:ring-[#5c0f1b] cursor-pointer h-4 w-4"
+                  />
+                </th>
+                <th className="px-4 py-3 text-left">Pedido</th>
+                <th className="px-4 py-3 text-left">Cliente</th>
+                <th className="px-4 py-3 text-left">Fecha Emisión</th>
+                <th className="px-4 py-3 text-left">Base Imponible</th>
+                <th className="px-4 py-3 text-left">IGV</th>
+                <th className="px-4 py-3 text-left">Total Final</th>
+                <th className="px-4 py-3 text-center">Acciones</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-stone-100 text-[#2a1115] font-semibold">
+              {filteredItems.map((item) => {
+                const isSelected = selectedIds.includes(item.id_venta)
+                const baseVal = Number(item.base_imponible)
+                const igvVal = Number(item.igv)
+                const totalFinalCalculado = Number(item.total) + igvVal
+                return (
+                  <tr key={item.id_venta} className={cn("hover:bg-[#faf8f5]/50 transition", isSelected && "bg-[#5c0f1b]/2")}>
+                    <td className="px-4 py-3">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleSelect(item.id_venta)}
+                        className="rounded text-[#5c0f1b] focus:ring-[#5c0f1b] cursor-pointer h-4 w-4"
+                      />
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="font-mono text-xs font-black text-[#5c0f1b]">
+                        #{item.id_venta}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 font-black">{item.cliente}</td>
+                    <td className="px-4 py-3 text-stone-500 text-xs font-mono">
+                      {new Date(item.fecha_venta).toLocaleDateString('es-PE', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </td>
+                    <td className="px-4 py-3 text-stone-600">{money(baseVal)}</td>
+                    <td className="px-4 py-3 text-stone-600">{money(igvVal)}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-col">
+                        <span className="font-black text-[#5c0f1b]">
+                          {money(totalFinalCalculado)}
+                        </span>
+                        {(!!item.id_cupon_cliente || !!item.cupon_codigo) && (
+                          <span className="inline-flex items-center gap-1 text-[9px] font-black text-emerald-600 bg-emerald-50 border border-emerald-100 px-1.5 py-0.5 rounded-md mt-0.5 w-max">
+                            🏷️ {item.cupon_codigo ? `Cupón: ${item.cupon_codigo}` : 'Cupón Usado'}
+                            {Number(item.monto_descuento_cupon || 0) > 0 && ` (-${money(Number(item.monto_descuento_cupon))})`}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <button
+                        onClick={() => handleDescargar(item.id_venta)}
+                        className="inline-flex items-center gap-1.5 bg-stone-100 hover:bg-[#5c0f1b]/10 text-stone-700 hover:text-[#5c0f1b] text-xs font-black px-3 py-1.5 rounded-xl transition cursor-pointer"
+                      >
+                        <FileText className="h-3.5 w-3.5" />
+                        PDF
+                      </button>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   )
 }

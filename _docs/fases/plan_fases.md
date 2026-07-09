@@ -68,6 +68,7 @@ graph TD
   * Endpoints completos de tracking para el cliente (`GET /ventas/{id}/tracking`).
   * Panel de métricas e ingresos integrados y dashboard en vivo con conteo por estados, ranking de productos y tendencias en los últimos 30 días.
   * Tabla de `notifications` integradas para informar al cliente de sus cambios de estado y resolver los reportes (polling nativo).
+* **Mejoras julio 2026:** FSM ampliada (`EN_CAMINO → DEVUELTO`, `ENTREGADO → REEMBOLSADO`), verificación de titularidad (cliente solo opera sus pedidos), cancelación desde el panel del cliente, y fix de stock negativo en devolución de lotes vencidos. Ver [fase5 §8](./fase5_pedidos_extendido.md) y [Auditoría del Sistema](../AUDITORIA_SISTEMA_2026-07-08.md).
 
 ### 🔹 Fase 6: Sistema de Fidelización CriptoTrufas y Cuponería ✅ IMPLEMENTADO
 * **Objetivo:** Gamificar la pastelería mediante la moneda interna virtual del proyecto (CriptoTrufas), otorgando puntos por compras e incentivando canjes por cupones de descuento.

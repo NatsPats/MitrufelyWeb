@@ -3,7 +3,7 @@ import type { ColumnDef } from '@tanstack/react-table'
 import { RefreshCw, CheckCircle, AlertOctagon, AlertTriangle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ReconciliationItem } from '../types'
-import { useReconciliationQuery } from '../hooks/useInventory'
+import { useReconciliationQuery, useAutoAdjustInventoryMutation } from '../hooks/useInventory'
 import { AdminDataTable } from '@/features/products/components/AdminDataTable'
 
 export function ReconciliationPanel() {
@@ -14,6 +14,8 @@ export function ReconciliationPanel() {
     refetch,
     isRefetching,
   } = useReconciliationQuery()
+
+  const autoAdjust = useAutoAdjustInventoryMutation()
 
   // Audit results summary
   const summary = useMemo(() => {
@@ -145,21 +147,37 @@ export function ReconciliationPanel() {
             </p>
             {!summary.isClean && (
               <p className="text-xs font-bold text-red-600 mt-2">
-                ⚠️ Hay {summary.discrepancies} producto(s) desalineado(s). Contacte a soporte o
-                ejecute una corrección manual.
+                ⚠️ Hay {summary.discrepancies} producto(s) desalineado(s). Ejecute el autoajuste basado en lotes activos o haga una corrección manual.
               </p>
             )}
           </div>
         </div>
 
-        <button
-          onClick={() => refetch()}
-          disabled={isLoading || isRefetching}
-          className="inline-flex items-center gap-2 bg-[#5c0f1b] text-white hover:bg-[#7a1525] disabled:opacity-50 px-5 py-2.5 rounded-xl text-sm font-bold shadow-md shadow-[#5c0f1b]/15 transition-all border-none cursor-pointer"
-        >
-          <RefreshCw className={cn('h-4 w-4', (isLoading || isRefetching) && 'animate-spin')} />
-          Ejecutar Auditoría
-        </button>
+        <div className="flex flex-col sm:flex-row gap-2.5 shrink-0 w-full md:w-auto">
+          {!summary.isClean && (
+            <button
+              onClick={() => autoAdjust.mutate()}
+              disabled={autoAdjust.isPending || isLoading || isRefetching}
+              className="inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50 px-5 py-2.5 rounded-xl text-sm font-bold shadow-md shadow-emerald-600/15 transition-all border-none cursor-pointer active:scale-95"
+            >
+              {autoAdjust.isPending ? (
+                <RefreshCw className="h-4 w-4 animate-spin" />
+              ) : (
+                <CheckCircle className="h-4 w-4" />
+              )}
+              Autoajustar Stock
+            </button>
+          )}
+
+          <button
+            onClick={() => refetch()}
+            disabled={isLoading || isRefetching || autoAdjust.isPending}
+            className="inline-flex items-center justify-center gap-2 bg-[#5c0f1b] text-white hover:bg-[#7a1525] disabled:opacity-50 px-5 py-2.5 rounded-xl text-sm font-bold shadow-md shadow-[#5c0f1b]/15 transition-all border-none cursor-pointer active:scale-95"
+          >
+            <RefreshCw className={cn('h-4 w-4', (isLoading || isRefetching) && 'animate-spin')} />
+            Ejecutar Auditoría
+          </button>
+        </div>
       </div>
 
       {/* Tabla de Conciliación */}

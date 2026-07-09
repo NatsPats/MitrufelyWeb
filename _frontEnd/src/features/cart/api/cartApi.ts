@@ -10,6 +10,7 @@ export interface CartItemResponse {
   imagen_url?: string | null
   es_paquete: boolean
   id_paquete?: number | null
+  stock_actual?: number | null
 }
 
 export interface CartResponse {

@@ -87,6 +87,18 @@ export default function OrdersPage() {
         setConfirmModal({ ...confirmModal, error: 'Ingresa un monto válido mayor a 0.' })
         return
       }
+
+      const order = orders.find((o) => o.id_venta === confirmModal.id)
+      if (order) {
+        const limite = order.total_final ?? order.total
+        if (montoNum > Number(limite)) {
+          setConfirmModal({
+            ...confirmModal,
+            error: `El monto de reembolso no puede superar el total del pedido (S/. ${Number(limite).toFixed(2)}).`
+          })
+          return
+        }
+      }
     }
 
     // Construir payload según la acción
@@ -106,9 +118,11 @@ export default function OrdersPage() {
           // NO cerrar el modal: mostrar el error dentro para permitir reintentar
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const e = error as any
+          const customMsg = e?.response?.data?.error?.message
           const detail = e?.response?.data?.detail
           let msg = 'No se pudo procesar la transición.'
-          if (Array.isArray(detail)) msg = detail.map((err) => err.msg || err).join(', ')
+          if (customMsg) msg = customMsg
+          else if (Array.isArray(detail)) msg = detail.map((err) => err.msg || err).join(', ')
           else if (typeof detail === 'string') msg = detail
           setConfirmModal((prev) => ({ ...prev, error: msg }))
         },
@@ -145,19 +159,22 @@ export default function OrdersPage() {
         accessorKey: 'fecha_venta',
         header: 'Fecha y Hora',
         cell: ({ row }) => (
-          <span className="text-xs font-mono text-stone-500">
+          <span className="text-xs font-mono text-stone-500 whitespace-nowrap">
             {formatDateTime(row.getValue('fecha_venta'))}
           </span>
         ),
       },
       {
         accessorKey: 'id_cliente',
-        header: 'ID Cliente',
-        cell: ({ row }) => (
-          <span className="text-xs font-mono text-stone-600">
-            Cliente #{row.getValue('id_cliente')}
-          </span>
-        ),
+        header: 'Cliente',
+        cell: ({ row }) => {
+          const name = row.original.cliente_nombre
+          return (
+            <span className="text-xs font-bold text-stone-700">
+              {name ? name : `Cliente #${row.getValue('id_cliente')}`}
+            </span>
+          )
+        },
       },
       {
         accessorKey: 'estado',
@@ -186,7 +203,8 @@ export default function OrdersPage() {
         accessorKey: 'estado_pago',
         header: 'Estado Pago',
         cell: ({ row }) => {
-          const val = row.getValue('estado_pago') as string
+          const isReembolsado = row.original.estado === 'REEMBOLSADO'
+          const val = isReembolsado ? 'PENDIENTE' : (row.getValue('estado_pago') as string)
           return (
             <span
               className={cn(
@@ -202,11 +220,24 @@ export default function OrdersPage() {
       {
         accessorKey: 'total',
         header: 'Monto Total',
-        cell: ({ row }) => (
-          <span className="font-black text-[#5c0f1b]">
-            S/. {Number(row.getValue('total')).toFixed(2)}
-          </span>
-        ),
+        cell: ({ row }) => {
+          const discount = Number(row.original.monto_descuento_cupon || 0)
+          const hasCoupon = !!row.original.id_cupon_cliente || !!row.original.cupon_codigo
+          const couponCode = row.original.cupon_codigo
+          return (
+            <div className="flex flex-col">
+              <span className="font-black text-[#5c0f1b]">
+                S/. {Number(row.getValue('total')).toFixed(2)}
+              </span>
+              {hasCoupon && (
+                <span className="inline-flex items-center gap-1 text-[9px] font-black text-emerald-600 bg-emerald-50 border border-emerald-100 px-1.5 py-0.5 rounded-md mt-0.5 w-max">
+                  🏷️ {couponCode ? `Cupón: ${couponCode}` : 'Cupón Usado'}
+                  {discount > 0 && ` (-S/. ${discount.toFixed(2)})`}
+                </span>
+              )}
+            </div>
+          )
+        },
       },
       {
         accessorKey: 'puntos_ganados',
@@ -233,46 +264,56 @@ export default function OrdersPage() {
                 <Eye className="h-4 w-4" />
               </Link>
               
-              <div className="relative group">
-                <button className="inline-flex items-center justify-center px-2 py-1.5 rounded-lg border border-stone-200 hover:bg-stone-50 text-xs font-bold text-stone-600">
-                  Acciones ▼
+              {transitionMut.isPending && transitionMut.variables?.id === order.id_venta ? (
+                <button
+                  disabled
+                  className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-stone-200 bg-stone-50 text-[10px] font-black text-stone-400 cursor-not-allowed uppercase tracking-wider"
+                >
+                  <Loader2 className="h-3 w-3 animate-spin text-[#5c0f1b]" />
+                  Procesando
                 </button>
-                <div className="absolute right-0 mt-1 w-36 bg-white border border-stone-200 rounded-xl shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 overflow-hidden">
-                  {order.estado === 'PENDIENTE' && (
-                    <>
-                      <button onClick={(e) => handleTransition(order.id_venta, 'pagar', e)} className="w-full text-left px-3 py-2 text-xs font-bold hover:bg-blue-50 text-blue-700">Marcar Pagado</button>
-                      <button onClick={(e) => handleTransition(order.id_venta, 'cancelar', e)} className="w-full text-left px-3 py-2 text-xs font-bold hover:bg-red-50 text-red-700">Cancelar</button>
-                    </>
-                  )}
-                  {order.estado === 'PAGADO' && (
-                    <>
-                      <button onClick={(e) => handleTransition(order.id_venta, 'preparar', e)} className="w-full text-left px-3 py-2 text-xs font-bold hover:bg-orange-50 text-orange-700">Preparar</button>
-                      <button onClick={(e) => handleTransition(order.id_venta, 'cancelar', e)} className="w-full text-left px-3 py-2 text-xs font-bold hover:bg-red-50 text-red-700">Cancelar</button>
-                    </>
-                  )}
-                  {order.estado === 'PREPARANDO' && (
-                    <>
-                      <button onClick={(e) => handleTransition(order.id_venta, 'despachar', e)} className="w-full text-left px-3 py-2 text-xs font-bold hover:bg-indigo-50 text-indigo-700">Despachar</button>
-                      <button onClick={(e) => handleTransition(order.id_venta, 'cancelar', e)} className="w-full text-left px-3 py-2 text-xs font-bold hover:bg-red-50 text-red-700">Cancelar</button>
-                    </>
-                  )}
-                  {order.estado === 'EN_CAMINO' && (
-                    <>
-                      <button onClick={(e) => handleTransition(order.id_venta, 'entregar', e)} className="w-full text-left px-3 py-2 text-xs font-bold hover:bg-emerald-50 text-emerald-700">Entregar</button>
-                      <button onClick={(e) => handleTransition(order.id_venta, 'devolver', e)} className="w-full text-left px-3 py-2 text-xs font-bold hover:bg-rose-50 text-rose-700">Devolver (retorna)</button>
-                    </>
-                  )}
-                  {order.estado === 'ENTREGADO' && (
-                    <>
-                      <button onClick={(e) => handleTransition(order.id_venta, 'devolver', e)} className="w-full text-left px-3 py-2 text-xs font-bold hover:bg-rose-50 text-rose-700">Devolver</button>
+              ) : (
+                <div className="relative group">
+                  <button className="inline-flex items-center justify-center px-2 py-1.5 rounded-lg border border-stone-200 hover:bg-stone-50 text-xs font-bold text-stone-600">
+                    Acciones ▼
+                  </button>
+                  <div className="absolute right-0 mt-1 w-36 bg-white border border-stone-200 rounded-xl shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 overflow-hidden">
+                    {order.estado === 'PENDIENTE' && (
+                      <>
+                        <button onClick={(e) => handleTransition(order.id_venta, 'pagar', e)} className="w-full text-left px-3 py-2 text-xs font-bold hover:bg-blue-50 text-blue-700">Marcar Pagado</button>
+                        <button onClick={(e) => handleTransition(order.id_venta, 'cancelar', e)} className="w-full text-left px-3 py-2 text-xs font-bold hover:bg-red-50 text-red-700">Cancelar</button>
+                      </>
+                    )}
+                    {order.estado === 'PAGADO' && (
+                      <>
+                        <button onClick={(e) => handleTransition(order.id_venta, 'preparar', e)} className="w-full text-left px-3 py-2 text-xs font-bold hover:bg-orange-50 text-orange-700">Preparar</button>
+                        <button onClick={(e) => handleTransition(order.id_venta, 'cancelar', e)} className="w-full text-left px-3 py-2 text-xs font-bold hover:bg-red-50 text-red-700">Cancelar</button>
+                      </>
+                    )}
+                    {order.estado === 'PREPARANDO' && (
+                      <>
+                        <button onClick={(e) => handleTransition(order.id_venta, 'despachar', e)} className="w-full text-left px-3 py-2 text-xs font-bold hover:bg-indigo-50 text-indigo-700">Despachar</button>
+                        <button onClick={(e) => handleTransition(order.id_venta, 'cancelar', e)} className="w-full text-left px-3 py-2 text-xs font-bold hover:bg-red-50 text-red-700">Cancelar</button>
+                      </>
+                    )}
+                    {order.estado === 'EN_CAMINO' && (
+                      <>
+                        <button onClick={(e) => handleTransition(order.id_venta, 'entregar', e)} className="w-full text-left px-3 py-2 text-xs font-bold hover:bg-emerald-50 text-emerald-700">Entregar</button>
+                        <button onClick={(e) => handleTransition(order.id_venta, 'devolver', e)} className="w-full text-left px-3 py-2 text-xs font-bold hover:bg-rose-50 text-rose-700">Devolver (retorna)</button>
+                      </>
+                    )}
+                    {order.estado === 'ENTREGADO' && (
+                      <>
+                        <button onClick={(e) => handleTransition(order.id_venta, 'devolver', e)} className="w-full text-left px-3 py-2 text-xs font-bold hover:bg-rose-50 text-rose-700">Devolver</button>
+                        <button onClick={(e) => handleTransition(order.id_venta, 'reembolsar', e)} className="w-full text-left px-3 py-2 text-xs font-bold hover:bg-purple-50 text-purple-700">Reembolsar</button>
+                      </>
+                    )}
+                    {(order.estado === 'CANCELADO' || order.estado === 'DEVUELTO') && (
                       <button onClick={(e) => handleTransition(order.id_venta, 'reembolsar', e)} className="w-full text-left px-3 py-2 text-xs font-bold hover:bg-purple-50 text-purple-700">Reembolsar</button>
-                    </>
-                  )}
-                  {(order.estado === 'CANCELADO' || order.estado === 'DEVUELTO') && (
-                    <button onClick={(e) => handleTransition(order.id_venta, 'reembolsar', e)} className="w-full text-left px-3 py-2 text-xs font-bold hover:bg-purple-50 text-purple-700">Reembolsar</button>
-                  )}
+                    )}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           )
         },

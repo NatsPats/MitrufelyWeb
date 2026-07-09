@@ -88,14 +88,18 @@ class ReportsService:
                 Venta.base_imponible,
                 Venta.igv,
                 Venta.total,
+                Venta.monto_descuento_cupon,
+                Venta.id_cupon_cliente,
                 Usuario.nombres,
                 Usuario.apellidos,
                 Usuario.email,
                 MetodoPago.tipo_pago,
+                CuponCliente.codigo_unico.label("cupon_codigo"),
             )
             .join(Cliente, Cliente.id_cliente == Venta.id_cliente)
             .join(Usuario, Usuario.id_usuario == Cliente.id_usuario)
             .outerjoin(MetodoPago, MetodoPago.id_venta == Venta.id_venta)
+            .outerjoin(CuponCliente, CuponCliente.id_cupon_cliente == Venta.id_cupon_cliente)
         )
 
         if fecha_desde is not None:
@@ -128,6 +132,9 @@ class ReportsService:
                 igv=r.igv or Decimal("0"),
                 total=r.total or Decimal("0"),
                 metodo_pago=r.tipo_pago,
+                monto_descuento_cupon=r.monto_descuento_cupon or Decimal("0"),
+                id_cupon_cliente=r.id_cupon_cliente,
+                cupon_codigo=r.cupon_codigo,
             )
             items.append(item)
             if r.estado not in _ESTADOS_EXCLUIDOS_FINANCIERO:

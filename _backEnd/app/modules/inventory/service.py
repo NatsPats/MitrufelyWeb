@@ -236,3 +236,84 @@ class InventoryService:
             )
             for row in rows
         ]
+
+    async def auto_adjust_inventory(self, id_usuario: int) -> dict:
+        """
+        Corrige las discrepancias de inventario utilizando como fuente de verdad
+        los lotes activos (stock_calculado_lotes).
+        """
+        from app.infrastructure.database.models.catalogo import Producto
+        from app.infrastructure.database.models.enums import TipoMovimientoStockEnum
+        from sqlalchemy import select
+
+        adjusted_products = []
+
+        try:
+            async with self._session.begin():
+                # 1. Obtener todos los productos desalineados
+                rows = await self._repo.get_reconciliation_all(solo_descuadrados=True)
+
+                for row in rows:
+                    id_producto = row["id_producto"]
+                    stock_lotes = row["stock_calculado_lotes"]
+                    stock_kardex = row["stock_calculado_kardex"]
+
+                    # A. Alinear productos.stock_actual
+                    stmt = select(Producto).where(Producto.id_producto == id_producto)
+                    res = await self._session.execute(stmt)
+                    producto = res.scalar_one_or_none()
+
+                    if not producto:
+                        continue
+
+                    # Actualizar stock actual
+                    producto.stock_actual = stock_lotes
+
+                    # B. Alinear stock_calculado_kardex si hay diferencia
+                    discrepancy = stock_lotes - stock_kardex
+                    if discrepancy != 0:
+                        # Si discrepancia > 0: necesitamos un movimiento que SUME (usamos DEVOLUCION para evitar triggers manuales)
+                        # Si discrepancia < 0: necesitamos un movimiento que RESTE (usamos VENCIMIENTO para evitar triggers manuales)
+                        tipo_mov = (
+                            TipoMovimientoStockEnum.DEVOLUCION
+                            if discrepancy > 0
+                            else TipoMovimientoStockEnum.VENCIMIENTO
+                        )
+                        cantidad_mov = abs(discrepancy)
+
+                        self._session.add(
+                            MovimientoStock(
+                                id_producto=id_producto,
+                                id_lote=None,  # Ajuste global, no afecta a ningún lote individual
+                                id_venta=None,
+                                id_usuario=id_usuario,
+                                tipo_movimiento=tipo_mov,
+                                cantidad=cantidad_mov,
+                                stock_resultante=stock_lotes,
+                                costo_unitario=producto.precio,
+                                observacion=(
+                                    f"Autoajuste de auditoría (Kardex alineado a Lotes Activos). "
+                                    f"Discrepancia corregida: {discrepancy} uds."
+                                ),
+                            )
+                        )
+
+                    adjusted_products.append({
+                        "id_producto": id_producto,
+                        "nombre": producto.nombre,
+                        "stock_lotes": stock_lotes,
+                        "stock_kardex_anterior": stock_kardex,
+                        "stock_actual_anterior": row["stock_actual"],
+                    })
+
+                await self._session.flush()
+
+        except Exception as exc:
+            raise DatabaseError(f"Error al ejecutar autoajuste de inventario. {exc}") from exc
+
+        return {
+            "success": True,
+            "message": f"Autoajuste de inventario completado con éxito para {len(adjusted_products)} producto(s).",
+            "adjusted_products": adjusted_products,
+        }
+

@@ -75,6 +75,7 @@ from app.modules.orders.state_machine import (
     validate_transition,
 )
 from app.modules.products.repository import IPaqueteRepository
+from app.infrastructure.database.models.usuarios import Cliente
 
 logger = structlog.get_logger(__name__)
 
@@ -429,6 +430,11 @@ class VentaService(AbstractService[VentaResponse, VentaRequest, None, int]):
             async with self.session.begin():
                 venta = await self._get_venta_or_raise(id_venta)
 
+                if venta.estado == EstadoVentaEnum.PAGADO:
+                    await self.session.flush()
+                    await self.session.refresh(venta)
+                    return VentaResponse.model_validate(venta)
+
                 await self._cambiar_estado(
                     venta=venta,
                     nuevo_estado=EstadoVentaEnum.PAGADO,
@@ -471,6 +477,11 @@ class VentaService(AbstractService[VentaResponse, VentaRequest, None, int]):
         try:
             async with self.session.begin():
                 venta = await self._get_venta_or_raise(id_venta)
+
+                if venta.estado == EstadoVentaEnum.PREPARANDO:
+                    await self.session.flush()
+                    await self.session.refresh(venta)
+                    return VentaResponse.model_validate(venta)
 
                 # Calcular ETA
                 n_productos = sum(d.cantidad for d in venta.detalles)
@@ -532,6 +543,11 @@ class VentaService(AbstractService[VentaResponse, VentaRequest, None, int]):
             async with self.session.begin():
                 venta = await self._get_venta_or_raise(id_venta)
 
+                if venta.estado == EstadoVentaEnum.EN_CAMINO:
+                    await self.session.flush()
+                    await self.session.refresh(venta)
+                    return VentaResponse.model_validate(venta)
+
                 await self._cambiar_estado(
                     venta=venta,
                     nuevo_estado=EstadoVentaEnum.EN_CAMINO,
@@ -587,6 +603,11 @@ class VentaService(AbstractService[VentaResponse, VentaRequest, None, int]):
         try:
             async with self.session.begin():
                 venta = await self._get_venta_or_raise(id_venta)
+
+                if venta.estado == EstadoVentaEnum.ENTREGADO:
+                    await self.session.flush()
+                    await self.session.refresh(venta)
+                    return VentaResponse.model_validate(venta)
 
                 venta.delivery_completed_at = datetime.utcnow()
                 await self._cambiar_estado(
@@ -658,6 +679,11 @@ class VentaService(AbstractService[VentaResponse, VentaRequest, None, int]):
             async with self.session.begin():
                 venta = await self._get_venta_or_raise(id_venta)
 
+                if venta.estado == EstadoVentaEnum.CANCELADO:
+                    await self.session.flush()
+                    await self.session.refresh(venta)
+                    return VentaResponse.model_validate(venta)
+
                 # Autorización: el cliente solo puede cancelar sus propios pedidos.
                 self._verificar_titularidad(venta, id_usuario, es_admin)
 
@@ -712,9 +738,21 @@ class VentaService(AbstractService[VentaResponse, VentaRequest, None, int]):
         restaurar la cantidad_disponible de cada lote, recalcular su
         estado_lote, y crear un MovimientoStock(DEVOLUCION) con id_lote
         poblado para mantener trazabilidad en el Kardex.
+
+        REGLA DE NEGOCIO — Lotes vencidos:
+          Si el lote original está VENCIDO o su fecha_vencimiento ya pasó,
+          las unidades devueltas se DESCARTAN (no se reingresan al inventario)
+          para evitar que producto expirado vuelva a la venta. En este caso NO
+          se inserta ningún movimiento en el Kardex: las unidades ya fueron
+          restadas por el movimiento VENTA original al procesar la compra, por
+          lo que registrar una nueva salida (MERMA/VENCIMIENTO) provocaría una
+          doble sustracción y stock negativo. La trazabilidad del descarte
+          queda en el OrderEvent y en el log estructurado.
         """
         # Recalcular y actualizar producto.stock_actual una sola vez por producto
         stock_por_producto: dict[int, int] = {}
+        unidades_eliminadas: int = 0
+        ahora = datetime.utcnow()
 
         for detalle in venta.detalles:
             # Buscar los lotes FEFO que fueron consumidos para este detalle
@@ -727,33 +765,64 @@ class VentaService(AbstractService[VentaResponse, VentaRequest, None, int]):
                     if not lote:
                         continue
 
-                    # Restaurar cantidad_disponible del lote
-                    lote.cantidad_disponible += dvl.cantidad
-
-                    # Recalcular estado_lote: VIGENTE si tiene stock y no está vencido
-                    if lote.cantidad_disponible > 0 and lote.estado_lote != EstadoLoteEnum.VENCIDO:
-                        lote.estado_lote = EstadoLoteEnum.VIGENTE
-
-                    # Insertar movimiento Kardex con id_lote poblado
-                    self.session.add(MovimientoStock(
-                        id_producto=detalle.id_producto,
-                        id_lote=dvl.id_lote,
-                        id_venta=venta.id_venta,
-                        id_usuario=id_usuario,
-                        tipo_movimiento=TipoMovimientoStockEnum.DEVOLUCION,
-                        cantidad=dvl.cantidad,
-                        stock_resultante=0,  # se recalcula abajo
-                        costo_unitario=detalle.precio_unitario,
-                        observacion=(
-                            f"Devolución lote #{dvl.id_lote} por "
-                            f"reversión de venta #{venta.id_venta}"
-                        ),
-                    ))
-
-                    # Acumular para stock_actual del producto
-                    stock_por_producto[detalle.id_producto] = (
-                        stock_por_producto.get(detalle.id_producto, 0) + dvl.cantidad
+                    # Determinar si el lote está vencido
+                    lote_vencido = (
+                        lote.estado_lote == EstadoLoteEnum.VENCIDO
+                        or (lote.fecha_vencimiento is not None and lote.fecha_vencimiento < ahora)
                     )
+
+                    if lote_vencido:
+                        # ── Lote vencido: las unidades se descartan (merma) ────────────────────────────
+                        # El lote está expirado; las unidades devueltas NO se reingresan al inventario.
+                        # Tampoco se registra ningún movimiento en el Kardex: las unidades ya fueron
+                        # restadas por el movimiento VENTA original al procesar la venta. Registrar un
+                        # nuevo movimiento (VENCIMIENTO/MERMA) causaría una doble sustracción y dejaría
+                        # el stock del Kardex en negativo, descuadrando la conciliación triple.
+                        # La trazabilidad de este descarte queda en:
+                        #   - el OrderEvent al final del método (cuenta de unidades eliminadas), y
+                        #   - el log estructurado 'devolucion_merma_lote_vencido' de abajo.
+                        unidades_eliminadas += dvl.cantidad
+
+                        # Asegurar que el lote quede marcado como VENCIDO
+                        if lote.estado_lote != EstadoLoteEnum.VENCIDO:
+                            lote.estado_lote = EstadoLoteEnum.VENCIDO
+
+                        logger.info(
+                            "devolucion_merma_lote_vencido",
+                            id_lote=dvl.id_lote,
+                            id_venta=venta.id_venta,
+                            cantidad=dvl.cantidad,
+                            fecha_vencimiento=str(lote.fecha_vencimiento),
+                        )
+                    else:
+                        # ── DEVOLUCION normal: reingresar al stock ────────
+                        # Restaurar cantidad_disponible del lote
+                        lote.cantidad_disponible += dvl.cantidad
+
+                        # Recalcular estado_lote: VIGENTE si tiene stock
+                        if lote.cantidad_disponible > 0:
+                            lote.estado_lote = EstadoLoteEnum.VIGENTE
+
+                        # Insertar movimiento Kardex con id_lote poblado
+                        self.session.add(MovimientoStock(
+                            id_producto=detalle.id_producto,
+                            id_lote=dvl.id_lote,
+                            id_venta=venta.id_venta,
+                            id_usuario=id_usuario,
+                            tipo_movimiento=TipoMovimientoStockEnum.DEVOLUCION,
+                            cantidad=dvl.cantidad,
+                            stock_resultante=0,  # se recalcula abajo
+                            costo_unitario=detalle.precio_unitario,
+                            observacion=(
+                                f"Devolución lote #{dvl.id_lote} por "
+                                f"reversión de venta #{venta.id_venta}"
+                            ),
+                        ))
+
+                        # Acumular para stock_actual del producto
+                        stock_por_producto[detalle.id_producto] = (
+                            stock_por_producto.get(detalle.id_producto, 0) + dvl.cantidad
+                        )
             else:
                 # Fallback: no hay detalle_venta_lotes (caso raro: venta previa a triggers)
                 # Restaurar directamente sobre el producto como antes, sin id_lote.
@@ -784,10 +853,19 @@ class VentaService(AbstractService[VentaResponse, VentaRequest, None, int]):
             if producto:
                 producto.stock_actual += cantidad_total
 
+        # Construir descripción del evento con detalle de merma si aplica
+        if unidades_eliminadas > 0:
+            event_desc = (
+                f"Stock devuelto al inventario con restauración de lotes FEFO. "
+                f"{unidades_eliminadas} unidad(es) eliminada(s) por pertenecer a lotes vencidos (merma)."
+            )
+        else:
+            event_desc = "Stock devuelto al inventario con restauración de lotes FEFO."
+
         self.session.add(OrderEvent(
             id_venta=venta.id_venta,
             event_type=TipoEventoVentaEnum.STOCK_DEVUELTO,
-            description="Stock devuelto al inventario con restauración de lotes FEFO.",
+            description=event_desc,
             created_by=id_usuario,
         ))
 
@@ -810,6 +888,11 @@ class VentaService(AbstractService[VentaResponse, VentaRequest, None, int]):
         try:
             async with self.session.begin():
                 venta = await self._get_venta_or_raise(id_venta)
+
+                if venta.estado == EstadoVentaEnum.DEVUELTO:
+                    await self.session.flush()
+                    await self.session.refresh(venta)
+                    return VentaResponse.model_validate(venta)
 
                 # Autorización: el cliente solo puede operar sobre sus propios pedidos.
                 self._verificar_titularidad(venta, id_usuario, es_admin)
@@ -857,6 +940,11 @@ class VentaService(AbstractService[VentaResponse, VentaRequest, None, int]):
         try:
             async with self.session.begin():
                 venta = await self._get_venta_or_raise(id_venta)
+
+                if venta.estado == EstadoVentaEnum.REEMBOLSADO:
+                    await self.session.flush()
+                    await self.session.refresh(venta)
+                    return VentaResponse.model_validate(venta)
 
                 # Verificar que no exista ya un reembolso
                 if venta.order_refund:
@@ -995,7 +1083,8 @@ class VentaService(AbstractService[VentaResponse, VentaRequest, None, int]):
                 selectinload(Venta.documentos),
                 selectinload(Venta.order_events),
                 selectinload(Venta.order_refund),
-                selectinload(Venta.cliente),
+                selectinload(Venta.cliente).selectinload(Cliente.usuario),
+                selectinload(Venta.cupon_cliente),
             )
             .where(Venta.id_venta == id_venta)
         )
