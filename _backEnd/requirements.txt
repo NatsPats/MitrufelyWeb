@@ -62,7 +62,5 @@ cloudinary==1.41.0
 # --- MONITORING ---
 prometheus-fastapi-instrumentator==7.1.0
 
-# --- DEV / LINTING (included for tooling consistency) ---
-ruff==0.11.12
-black==25.1.0
-mypy==1.16.0
+# NOTE: Dev-only tools (ruff, black, mypy) have been moved to requirements-dev.txt
+# They are NOT needed at runtime and should NOT be installed in the production Docker image.

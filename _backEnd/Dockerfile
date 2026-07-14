@@ -1,6 +1,6 @@
 # ==============================================================================
 # Mifrufely Web — Backend Dockerfile
-# Multi-stage build: builder → production
+# Multi-stage build: builder → development | production
 # ==============================================================================
 
 # ── Stage 1: Builder ─────────────────────────────────────────────────────────
@@ -46,11 +46,19 @@ CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload
 
 
 # ── Stage 3: Production ───────────────────────────────────────────────────────
+# This is the target used by Render.com.
+# Key decisions:
+#   - $PORT is injected by Render at runtime (NOT hardcoded).
+#   - Single uvicorn process: the app is async-native (asyncpg), so multiple
+#     OS processes provide no benefit on a single CPU core and waste RAM.
+#   - Non-root user (appuser) for security hardening.
+#   - No dev tools (ruff, black, mypy) — they were removed from requirements.txt.
 FROM python:3.11-slim AS production
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PYTHONPATH=/app
+    PYTHONPATH=/app \
+    PORT=8000
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
@@ -67,9 +75,10 @@ RUN chown -R appuser:appgroup /app
 
 USER appuser
 
-EXPOSE 8000
+# Render health check is configured in render.yaml via healthCheckPath.
+# This HEALTHCHECK is a fallback for local `docker run` usage only.
+HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen(f'http://localhost:{__import__(\"os\").environ.get(\"PORT\", 8000)}/api/v1/health')"
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
-    CMD python -c "import httpx; httpx.get('http://localhost:8000/api/v1/health').raise_for_status()"
-
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
+# $PORT is injected by Render. Default fallback: 8000 for local production builds.
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
