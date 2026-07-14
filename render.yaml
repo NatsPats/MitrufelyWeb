@@ -18,10 +18,8 @@ services:
     region: oregon
     plan: starter
     rootDir: _backEnd
-    # Render will build from _backEnd/Dockerfile and target the "production" stage.
-    dockerfilePath: Dockerfile
-    dockerContext: .
-    dockerBuildTarget: production
+    # Render will automatically look for 'Dockerfile' in rootDir (_backEnd)
+    # and build the last stage ('production') by default.
     healthCheckPath: /api/v1/health
     autoDeploy: true
     envVars:
