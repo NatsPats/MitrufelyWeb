@@ -85,6 +85,7 @@ class RolResponse(BaseModel):
 
 
 class ClienteResponse(BaseModel):
+    id_cliente: int
     direccion: str | None = None
     referencia: str | None = None
     telefono: str | None = None

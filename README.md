@@ -187,3 +187,24 @@ El repositorio incluye un archivo `render.yaml` en la raíz. Al conectarlo con R
     - `VITE_GOOGLE_CLIENT_ID` con tu credencial de Google OAuth.
 4.  Realiza el despliegue. Vercel utilizará el archivo `vercel.json` para gestionar el routing de la SPA de forma nativa.
 5.  Actualiza las variables `FRONTEND_URL` y `ALLOWED_ORIGINS` en el dashboard de Render con tu URL de Vercel para autorizar el intercambio CORS de producción.
+
+---
+
+## 🪪 Consulta de DNI/RUC (json.pe)
+
+Los clientes pueden autocompletar sus datos de identidad (DNI) o fiscales (RUC) desde su perfil y desde el checkout mediante la API de [json.pe](https://json.pe/).
+
+**Flujo:**
+1. El cliente presiona "🔍 Consultar" junto al número de documento.
+2. El backend consulta `https://api.json.pe` con el token `JSONPE_API_TOKEN` (en `.env`).
+3. Los datos se cachean en Redis por 24 horas para evitar consumos de créditos en consultas repetidas del mismo documento.
+4. El formulario se rellena. El cliente revisa y presiona "Guardar" para persistir (no se sobrescribe la base de datos automáticamente).
+
+**Variables de entorno (`_backEnd/.env`):**
+
+| Variable | Descripción | Default |
+|---|---|---|
+| `JSONPE_API_TOKEN` | Token Bearer de api.json.pe. Vacío = modo degradado (servicio deshabilitado). | `""` |
+| `JSONPE_BASE_URL` | URL base del API. | `https://api.json.pe` |
+| `JSONPE_CACHE_TTL_SECONDS` | TTL del cache Redis (segundos). | `86400` |
+| `JSONPE_TIMEOUT_SECONDS` | Timeout HTTP (segundos). | `10` |

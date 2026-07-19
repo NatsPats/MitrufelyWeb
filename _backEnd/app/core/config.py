@@ -58,7 +58,7 @@ class Settings(BaseSettings):
     ALLOWED_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:5173"]
     ALLOWED_METHODS: list[str] = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
     # Lista explícita de headers permitidos (no usar "*" con allow_credentials=True)
-    ALLOWED_HEADERS: list[str] = ["Authorization", "Content-Type", "X-Request-ID"]
+    ALLOWED_HEADERS: list[str] = ["Authorization", "Content-Type", "X-Request-ID", "Idempotency-Key"]
 
     # ── Redis ─────────────────────────────────────────────────────────────────
     REDIS_URL: str = "redis://redis:6399/0"
@@ -98,6 +98,25 @@ class Settings(BaseSettings):
     CLOUDINARY_CLOUD_NAME: str | None = Field(None, description="Cloudinary Cloud Name")
     CLOUDINARY_API_KEY: str | None = Field(None, description="Cloudinary API Key")
     CLOUDINARY_API_SECRET: str | None = Field(None, description="Cloudinary API Secret")
+
+    # ── JSON.PE (Consulta DNI / RUC) ──────────────────────────────────────────
+    # Token obtenido en https://json.pe/ -> Dashboard. Vacío = modo degradado.
+    JSONPE_API_TOKEN: SecretStr = Field(
+        SecretStr(""),
+        description="Token Bearer para api.json.pe (vacío = servicio deshabilitado).",
+    )
+    JSONPE_BASE_URL: str = Field(
+        "https://api.json.pe",
+        description="URL base del API externo de consulta.",
+    )
+    JSONPE_CACHE_TTL_SECONDS: int = Field(
+        86400,
+        description="TTL en segundos del cache Redis para consultas DNI/RUC (default 24h).",
+    )
+    JSONPE_TIMEOUT_SECONDS: float = Field(
+        10.0,
+        description="Timeout HTTP hacia json.pe en segundos.",
+    )
 
     # ── Rate Limiting (Login) ─────────────────────────────────────────
     # Máximo de intentos fallidos de inicio de sesión por IP antes de bloquear

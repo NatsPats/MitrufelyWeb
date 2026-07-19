@@ -68,13 +68,16 @@ _backEnd/
 │   │   ├── sweetcoins/
 │   │   ├── reports/
 │   │   ├── dashboard/
-│   │   └── users/
+│   │   ├── users/
+│   │   └── consultas/             # json.pe DNI/RUC lookup
 │   ├── routers/
 │   │   └── __init__.py            # api_router aggregator
 │   └── shared/
-│       └── schemas/
-│           ├── pagination.py      # PaginatedResponse[T]
-│           └── response.py        # APIResponse[T], MessageResponse
+│       ├── schemas/
+│       │   ├── pagination.py      # PaginatedResponse[T]
+│       │   └── response.py        # APIResponse[T], MessageResponse
+│       └── external/              # Third-party HTTP clients
+│           └── jsonpe/            # json.pe (DNI/RUC)
 ├── tests/
 │   ├── conftest.py                # Shared fixtures
 │   ├── unit/                      # Pure business logic tests

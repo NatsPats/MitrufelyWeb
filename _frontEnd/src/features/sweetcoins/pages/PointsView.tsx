@@ -219,13 +219,13 @@ export default function PointsView() {
                 <button
                   id="puntos-historial-btn"
                   onClick={() => setHistorialOpen((o) => !o)}
-                  className="bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-2xl px-5 py-4 text-center min-w-[100px] transition-all cursor-pointer border-none"
+                  className="bg-[#ff7a45]/20 hover:bg-[#ff7a45]/35 border border-[#ff7a45]/30 backdrop-blur-sm rounded-2xl px-5 py-4 text-center min-w-[100px] transition-all cursor-pointer"
                 >
-                  <p className="text-white/50 text-[10px] font-black uppercase tracking-widest mb-1">Historial</p>
+                  <p className="text-white/70 text-[10px] font-black uppercase tracking-widest mb-1">Historial</p>
                   <p className="text-white font-black text-2xl" style={{ fontFamily: "'Outfit', sans-serif" }}>
                     {historial.length}
                   </p>
-                  <p className="text-white/40 text-[10px] font-semibold">movimientos</p>
+                  <p className="text-white/60 text-[10px] font-semibold">movimientos</p>
                 </button>
               </div>
             </div>

@@ -17,6 +17,7 @@ import { IssueModal } from '@/features/issues/components/IssueModal'
 import { reportsApi, descargarBlob } from '@/features/reports/api/reports.api'
 import { useQueryClient, useQuery } from '@tanstack/react-query'
 import { reviewsApi } from '@/features/reviews/api/reviews.api'
+import { useProfileData } from '@/features/auth/hooks/useProfile'
 
 const ESTADO_LABELS: Record<string, { label: string; color: string }> = {
   PENDIENTE: { label: 'Pendiente', color: 'bg-amber-100 text-amber-800 border-amber-200' },
@@ -55,6 +56,7 @@ export default function CustomerOrderDetailPage() {
   const [cancelMotivo, setCancelMotivo] = useState('')
   const [cancelError, setCancelError] = useState<string | null>(null)
   const transitionMut = useTransitionVentaMutation()
+  const { data: profileData } = useProfileData()
 
   const orderId = id ? Number(id) : null
 
@@ -104,6 +106,14 @@ export default function CustomerOrderDetailPage() {
   }
 
   const { data: order, isLoading, isError } = useOrderDetailQuery(orderId)
+  const esPropietario = !!profileData?.cliente?.id_cliente && profileData.cliente.id_cliente === order?.id_cliente
+
+  // Totales calculados en el frontend únicamente: total = subtotal + igv + costo_envio - descuento
+  const subtotalVal = Number(order?.subtotal_productos || 0)
+  const igvVal = Number(order?.igv || (subtotalVal / 1.18 * 0.18))
+  const envioVal = Number(order?.costo_envio || 0)
+  const descuentoVal = Number(order?.monto_descuento_cupon || 0)
+  const totalCalculado = subtotalVal + igvVal + envioVal - descuentoVal
 
   const { data: reviewData } = useQuery({
     queryKey: ['orders', 'detail', orderId, 'review'],
@@ -188,6 +198,20 @@ export default function CustomerOrderDetailPage() {
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
             
             <div className="space-y-6">
+              {/* Alerta de Administrador/Consulta si no es propietario */}
+              {order && !esPropietario && (
+                <div className="bg-amber-50 rounded-2xl p-4 border border-amber-200 flex items-start gap-2.5 shadow-sm">
+                  <AlertCircle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="font-black text-amber-900 text-sm">Vista de Administrador / Consulta</h4>
+                    <p className="text-xs text-amber-800 font-semibold mt-1">
+                      Este pedido pertenece al cliente: <span className="underline font-black">{order.cliente_nombre || 'Cliente de Mitrufely'}</span>.
+                      Las opciones de calificación, reportes y cancelación de pedido están deshabilitadas para tu usuario.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* Acciones de Cliente (Reviews / Issues) */}
               {(order.estado === 'ENTREGADO' || !['CANCELADO', 'DEVUELTO', 'REEMBOLSADO', 'ANULADO'].includes(order.estado)) && (
                 <div className="bg-white rounded-2xl border border-[#5c0f1b]/8 p-5 flex flex-col sm:flex-row gap-4 items-center justify-between shadow-sm">
@@ -212,7 +236,9 @@ export default function CustomerOrderDetailPage() {
                           </div>
                           <button 
                             onClick={() => setReviewModalOpen(true)}
-                            className="px-4 py-2 bg-yellow-50 text-yellow-700 hover:bg-yellow-100 font-bold text-xs rounded-xl flex items-center gap-2 transition-colors cursor-pointer shrink-0"
+                            disabled={!esPropietario}
+                            className="px-4 py-2 bg-yellow-50 text-yellow-700 hover:bg-yellow-100 font-bold text-xs rounded-xl flex items-center gap-2 transition-colors cursor-pointer shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
+                            title={!esPropietario ? 'Solo el propietario del pedido puede calificar' : undefined}
                           >
                             <Star className="h-3.5 w-3.5 fill-yellow-500 text-yellow-500" /> Calificar
                           </button>
@@ -229,7 +255,9 @@ export default function CustomerOrderDetailPage() {
                       </div>
                       <button
                         onClick={() => setIssueModalOpen(true)}
-                        className="px-4 py-2 bg-red-50 text-red-700 hover:bg-red-100 font-bold text-xs rounded-xl flex items-center gap-2 transition-colors cursor-pointer"
+                        disabled={!esPropietario}
+                        className="px-4 py-2 bg-red-50 text-red-700 hover:bg-red-100 font-bold text-xs rounded-xl flex items-center gap-2 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                        title={!esPropietario ? 'Solo el propietario del pedido puede reportar incidencias' : undefined}
                       >
                         <AlertTriangle className="h-3.5 w-3.5" /> Reportar
                       </button>
@@ -249,7 +277,9 @@ export default function CustomerOrderDetailPage() {
                           setCancelError(null)
                           setCancelModalOpen(true)
                         }}
-                        className="px-4 py-2 bg-[#5c0f1b]/8 text-[#5c0f1b] hover:bg-[#5c0f1b]/15 font-bold text-xs rounded-xl flex items-center gap-2 transition-colors cursor-pointer shrink-0"
+                        disabled={!esPropietario}
+                        className="px-4 py-2 bg-[#5c0f1b]/8 text-[#5c0f1b] hover:bg-[#5c0f1b]/15 font-bold text-xs rounded-xl flex items-center gap-2 transition-colors cursor-pointer shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
+                        title={!esPropietario ? 'Solo el propietario del pedido puede cancelarlo' : undefined}
                       >
                         <Ban className="h-3.5 w-3.5" /> Cancelar pedido
                       </button>
@@ -328,12 +358,12 @@ export default function CustomerOrderDetailPage() {
 
                 <div className="flex justify-between text-sm font-semibold text-[#2a1115]/70">
                   <span>IGV</span>
-                  <span>S/. {Number(order.igv ?? (Number(order.total) / 1.18 * 0.18)).toFixed(2)}</span>
+                  <span>S/. {igvVal.toFixed(2)}</span>
                 </div>
 
                 <div className="flex justify-between text-lg font-black text-[#5c0f1b] border-t border-[#5c0f1b]/10 pt-2 mt-2">
                   <span>Total</span>
-                  <span>S/. {Number(order.total_final || order.total).toFixed(2)}</span>
+                  <span>S/. {totalCalculado.toFixed(2)}</span>
                 </div>
               </div>
 

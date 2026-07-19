@@ -17,7 +17,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   X, CheckCircle, Loader2, ArrowRight, ArrowLeft,
-  CreditCard, MapPin, ShieldCheck,
+  CreditCard, MapPin, ShieldCheck, Search, CheckCircle2,
 } from 'lucide-react'
 import confetti from 'canvas-confetti'
 import { useNavigate } from 'react-router'
@@ -29,6 +29,8 @@ import {
   fiscalSchema, type FiscalFormData,
   tarjetaSchema, type TarjetaFormData,
 } from '../schemas/checkout.schema'
+import { useConsultarDocumento } from '@/features/consultas/hooks/useConsultarDocumento'
+import type { DocumentoLookupResult } from '@/features/consultas/types'
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -109,6 +111,10 @@ export function PaymentModal({ isOpen, onClose, subtotalBase, igv, costoEnvio, e
 
   const { hydrateSweetCoins } = useCriptoTrufaStore()
 
+  const consultarDocumento = useConsultarDocumento()
+  const [lookupResult, setLookupResult] = useState<DocumentoLookupResult | null>(null)
+  const [consultadoOk, setConsultadoOk] = useState(false)
+
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const confettiRef = useRef<confetti.CreateTypes | null>(null)
 
@@ -143,6 +149,8 @@ export function PaymentModal({ isOpen, onClose, subtotalBase, igv, costoEnvio, e
       setTelefono('')
       setEnvioInitialized(false)
       hydrateSweetCoins()
+      setLookupResult(null)
+      setConsultadoOk(false)
     }
   }, [isOpen])
 
@@ -234,6 +242,27 @@ export function PaymentModal({ isOpen, onClose, subtotalBase, igv, costoEnvio, e
     }
     setEditEnvio(false)
     setStep(3)
+  }
+
+  const handleConsultarDocumento = async () => {
+    const tipo = fiscalForm.getValues('tipo_documento')
+    const numero = fiscalForm.getValues('numero_documento')
+    const esperado = tipo === 'DNI' ? 8 : 11
+    if (numero.length !== esperado) return
+    try {
+      const result = await consultarDocumento.mutateAsync({ tipo, numero })
+      setLookupResult(result)
+      setConsultadoOk(true)
+      // Rellena los campos del form
+      if (result.razon_social) {
+        fiscalForm.setValue('razon_social', result.razon_social)
+      }
+      if (result.direccion_fiscal) {
+        fiscalForm.setValue('direccion_fiscal', result.direccion_fiscal)
+      }
+    } catch {
+      setConsultadoOk(false)
+    }
   }
 
   const handlePagoSubmit = tarjetaForm.handleSubmit(async () => {
@@ -420,7 +449,38 @@ export function PaymentModal({ isOpen, onClose, subtotalBase, igv, costoEnvio, e
                       </select>
                     </Field>
                     <Field label="Número de Documento" error={fiscalForm.formState.errors.numero_documento?.message} required>
-                      <Input id="fiscal-numero" placeholder={fiscalForm.watch('tipo_documento') === 'RUC' ? '11 dígitos' : '8 dígitos'} error={!!fiscalForm.formState.errors.numero_documento} {...fiscalForm.register('numero_documento')} />
+                      <div className="flex gap-2">
+                        <Input
+                          id="fiscal-numero"
+                          placeholder={fiscalForm.watch('tipo_documento') === 'RUC' ? '11 dígitos' : '8 dígitos'}
+                          error={!!fiscalForm.formState.errors.numero_documento}
+                          {...fiscalForm.register('numero_documento')}
+                          onChange={(e) => {
+                            fiscalForm.setValue('numero_documento', e.target.value.replace(/\D/g, ''), { shouldValidate: true })
+                            setConsultadoOk(false)
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={handleConsultarDocumento}
+                          disabled={
+                            consultarDocumento.isPending ||
+                            (fiscalForm.watch('tipo_documento') === 'DNI'
+                              ? fiscalForm.watch('numero_documento').length !== 8
+                              : fiscalForm.watch('numero_documento').length !== 11)
+                          }
+                          className="shrink-0 inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#5c0f1b] text-white text-xs font-black hover:bg-[#7a1525] transition-all active:scale-95 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                          title="Consultar DNI/RUC en RENIEC/SUNAT"
+                        >
+                          {consultarDocumento.isPending ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : consultadoOk ? (
+                            <><CheckCircle2 className="h-3.5 w-3.5" /> OK</>
+                          ) : (
+                            <><Search className="h-3.5 w-3.5" /> Consultar</>
+                          )}
+                        </button>
+                      </div>
                     </Field>
                     {fiscalForm.watch('tipo_documento') === 'RUC' && (
                       <Field label="Razón Social" error={fiscalForm.formState.errors.razon_social?.message} required>
@@ -455,6 +515,28 @@ export function PaymentModal({ isOpen, onClose, subtotalBase, igv, costoEnvio, e
                   <MapPin className="h-4 w-4" />
                   Datos de Envío
                 </div>
+
+                {/* Banner: usar dirección fiscal como envío */}
+                {lookupResult?.direccion_fiscal && !editEnvio && (
+                  <div className="bg-amber-50 rounded-2xl p-4 border border-amber-200 space-y-2">
+                    <p className="text-xs font-bold text-amber-900 mb-1">
+                      💡 Detectamos la dirección fiscal de tu RUC:
+                    </p>
+                    <p className="text-xs text-amber-800 font-semibold mb-2">
+                      {lookupResult.direccion_fiscal}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDireccion(lookupResult.direccion_fiscal || '')
+                        setEditEnvio(true)
+                      }}
+                      className="text-xs font-black text-[#5c0f1b] underline hover:text-[#ff7a45] cursor-pointer block text-left"
+                    >
+                      Usar esta dirección para envío
+                    </button>
+                  </div>
+                )}
 
                 {profileData && (profileData.cliente?.direccion || profileData.telefono) && !editEnvio ? (
                   <div className="bg-emerald-50 rounded-2xl p-5 border border-emerald-200 space-y-3">

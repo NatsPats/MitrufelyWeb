@@ -40,6 +40,7 @@ export interface UserMeResponse {
     nombre: string
   }
   cliente?: {
+    id_cliente: number
     direccion: string | null
     referencia: string | null
     telefono: string | null

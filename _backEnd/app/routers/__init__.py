@@ -23,6 +23,7 @@ from app.routers.storage import router as storage_router
 from app.modules.sweetcoins.router import router as sweetcoins_router
 from app.modules.reports.router import router as reports_router
 from app.modules.users.router import router as users_router
+from app.modules.consultas.router import router as consultas_router
 
 api_router = APIRouter()
 
@@ -59,3 +60,4 @@ api_router.include_router(notifications_router)
 api_router.include_router(sweetcoins_router)
 api_router.include_router(reports_router)
 api_router.include_router(users_router)
+api_router.include_router(consultas_router)
