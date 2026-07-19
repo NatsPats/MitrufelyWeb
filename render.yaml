@@ -33,11 +33,11 @@ services:
       # ── Frontend URL (para links en emails de verificación/reset) ──
       # IMPORTANTE: Cambiar al dominio real de Vercel tras el deploy
       - key: FRONTEND_URL
-        value: https://mitrufely.vercel.app
+        value: https://mitrufely-web.vercel.app
       # ── CORS — Orígenes permitidos ──────────────────────────────
       # IMPORTANTE: Cambiar al dominio real de Vercel tras el deploy
       - key: ALLOWED_ORIGINS
-        value: '["https://mitrufely.vercel.app"]'
+        value: '["https://mitrufely-web.vercel.app"]'
       # ── Database (NeonDB — set via Render dashboard, never commit) ──
       # Format: postgresql+asyncpg://user:pass@host/db?sslmode=require
       - key: DATABASE_URL
