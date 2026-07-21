@@ -51,7 +51,7 @@ export function HeroSection({ onCatalogClick, onCriptotrufasClick }: HeroSection
       {/* Imagen de fondo — mármol con trufas (alineada a la derecha) */}
       {/* Usamos motion.img para el zoom lento cinematográfico */}
       <motion.img
-        src="/4.webp"
+        src="/hero.jpeg"
         alt=""
         aria-hidden="true"
         fetchPriority="high"
@@ -93,7 +93,7 @@ export function HeroSection({ onCatalogClick, onCriptotrufasClick }: HeroSection
           {/* Subtítulo — blanco */}
           <p className="hero-item text-base md:text-lg font-light mb-9 leading-[1.75] max-w-[460px]">
             <span className="text-[#ffffff] font-normal">
-              Gana puntos{" "}
+              Gana puntos{' '}
               <button
                 type="button"
                 onClick={onCriptotrufasClick}
@@ -101,8 +101,8 @@ export function HeroSection({ onCatalogClick, onCriptotrufasClick }: HeroSection
                 style={{ fontSize: 'inherit', fontFamily: 'inherit' }}
               >
                 CriptoTrufas
-              </button>{" "}
-              por cada compra.{" "}
+              </button>{' '}
+              por cada compra.{' '}
             </span>
             <span className="text-white font-semibold">Canjéalos por descuentos y más trufas.</span>
           </p>

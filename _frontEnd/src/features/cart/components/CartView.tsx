@@ -92,8 +92,8 @@ export default function CartView() {
 
   // Envío dinámico desde el backend, con fallback a S/15.00 mín y S/3.00 costo
   const { data: shippingData } = useShippingCost(subtotalConIgv, items.length > 0)
-  const envioGratis = shippingData ? shippingData.aplica_envio_gratis : (subtotalConIgv >= 15)
-  const costoEnvio = shippingData ? Number(shippingData.costo_envio) : (envioGratis ? 0 : 3)
+  const envioGratis = shippingData ? shippingData.aplica_envio_gratis : subtotalConIgv >= 15
+  const costoEnvio = shippingData ? Number(shippingData.costo_envio) : envioGratis ? 0 : 3
 
   // Total = base con descuento + IGV + envío
   const total = subtotalBaseConDescuento + igv + costoEnvio
@@ -436,7 +436,7 @@ export default function CartView() {
                 ) : fidelizacionCoupon ? (
                   <div className="space-y-2">
                     <div
-                      className={`flex items-center gap-3 border rounded-xl px-4 py-3 ${
+                      className={`flex items-center gap-3  rounded-xl px-4 py-3 ${
                         discount === 0
                           ? 'bg-amber-50 border-amber-200'
                           : 'bg-emerald-50 border-emerald-200'
@@ -615,14 +615,17 @@ export default function CartView() {
                   )}
 
                   {(() => {
-                    const threshold = shippingData ? Number(shippingData.free_shipping_threshold) : 15
+                    const threshold = shippingData
+                      ? Number(shippingData.free_shipping_threshold)
+                      : 15
                     return envioGratis ? (
                       <div className="text-[10px] text-center font-bold text-emerald-600 bg-emerald-50 p-2 rounded-lg mt-2">
                         ¡Felicidades! Tu pedido supera S/ {threshold.toFixed(2)} — Envío GRATIS 🎉
                       </div>
                     ) : (
                       <div className="text-[10px] text-center font-bold text-[#5c0f1b] bg-[#5c0f1b]/5 p-2 rounded-lg mt-2">
-                        Envío: S/ {costoEnvio.toFixed(2)}. ¡Agrega S/ {(threshold - subtotalConIgv).toFixed(2)} más para obtener envío GRATIS! 🚚
+                        Envío: S/ {costoEnvio.toFixed(2)}. ¡Agrega S/{' '}
+                        {(threshold - subtotalConIgv).toFixed(2)} más para obtener envío GRATIS! 🚚
                       </div>
                     )
                   })()}
@@ -664,10 +667,7 @@ export default function CartView() {
         total={total}
       />
 
-      <CheckoutAuthModal
-        isOpen={checkoutAuthOpen}
-        onClose={() => setCheckoutAuthOpen(false)}
-      />
+      <CheckoutAuthModal isOpen={checkoutAuthOpen} onClose={() => setCheckoutAuthOpen(false)} />
 
       {/* Modal de Advertencia: Cupón no coincide con productos en el carrito */}
       <AnimatePresence>
