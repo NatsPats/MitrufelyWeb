@@ -170,7 +170,7 @@ export function PacksSection() {
             <button
               aria-label="Siguiente pack"
               onClick={goRight}
-              className="hidden lg:flex absolute -right-12 top-1/2 -translate-y-1/2 z-20 h-11 w-11 rounded-full bg-[#ff7a45] text-white items-center justify-center shadow-lg hover:bg-[#e86a35] transition-all hover:scale-105 active:scale-95 cursor-pointer border-none"
+              className=" hidden lg:flex absolute -right-12 top-1/2 -translate-y-1/2 z-20 h-11 w-11 rounded-full bg-[#ff7a45] text-white items-center justify-center shadow-lg hover:bg-[#e86a35] transition-all hover:scale-105 active:scale-95 cursor-pointer border-none"
             >
               <ChevronRight className="h-6 w-6" />
             </button>
@@ -178,7 +178,7 @@ export function PacksSection() {
 
           {/* Controles de Navegación y Puntos (Móvil y Tablet) */}
           {!isLoading && !isError && totalPacks > 1 && (
-            <div className="flex items-center justify-center gap-4 mt-6">
+            <div className=" lg:hidden flex items-center justify-center gap-4 mt-6">
               <button
                 aria-label="Pack anterior"
                 onClick={goLeft}
